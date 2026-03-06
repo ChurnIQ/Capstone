@@ -252,7 +252,7 @@ The `Jenkinsfile` at the repo root defines a 5-stage pipeline:
 |---|---|
 | Checkout | Pull `main` from GitHub |
 | Install | `npm ci` |
-| Test | `npm test` |
+| Test | Run automated tests |
 | Build | `docker build` — tags image as `churniq:latest` |
 | Deploy | `docker compose up -d` |
 

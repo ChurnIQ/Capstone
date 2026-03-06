@@ -20,7 +20,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      MONGODB_URI: mongodb://192.168.29.6:27017/loginpage
+      MONGODB_URI: mongodb://172.17.0.1:27017/loginpage
       SESSION_SECRET: some-long-random-string
 # Google OAuth credentials
 # Get these from https://console.cloud.google.com/apis/credentials

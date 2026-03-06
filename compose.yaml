@@ -8,6 +8,14 @@
 # database or a cache. For examples, see the Awesome Compose repository:
 # https://github.com/docker/awesome-compose
 services:
+  mongo:
+    image: mongo:7
+    restart: always
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      - 27017:27017
+
   server:
     build:
       context: .
@@ -21,9 +29,20 @@ services:
       GOOGLE_CLIENT_ID: your-google-client-id
       GOOGLE_CLIENT_SECRET: your-google-client-secret
       GOOGLE_CALLBACK_URL: http://192.168.29.6:3000/auth/google/callback
+# Flask ML API — runs inside the same container on port 5000
+      ML_API_URL: http://localhost:5000
+# Set MODEL_PATH to your .pkl file path inside the container
+      MODEL_PATH: /usr/src/app/ml/model.pkl
+      SCALER_PATH: /usr/src/app/ml/scaler.pkl
     ports:
       - 3000:3000
+      - 5000:5000
     restart: always
+    depends_on:
+      - mongo
+
+volumes:
+  mongo-data:
 
 # The commented out section below is an example of how to define a PostgreSQL
 # database that your application can use. `depends_on` tells Docker Compose to

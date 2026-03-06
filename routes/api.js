@@ -23,8 +23,11 @@ const multer   = require('multer');
 const csv      = require('csv-parser');
 const fs       = require('fs');
 const path     = require('path');
+const http     = require('http');
 const Customer   = require('../models/Customer');
 const Prediction = require('../models/Prediction');
+
+const ML_API_URL = process.env.ML_API_URL || 'http://localhost:5000';
 
 // ── Auth guard – all API routes require login ─────────────────────────────────
 const ensureAuth = (req, res, next) => {
@@ -48,16 +51,50 @@ const upload = multer({
 // ─────────────────────────────────────────────────────────────────────────────
 // CHURN PREDICTION LOGIC
 // ─────────────────────────────────────────────────────────────────────────────
+
 /**
- * Local rule-based fallback model.
- * Swap this out for a Python ML microservice call when your model is ready.
- *
- * To call your Python Flask API instead:
- *   const axios = require('axios');
- *   const r = await axios.post(process.env.ML_API_URL + '/predict', features);
- *   return { probability: r.data.churn_probability, prediction: r.data.churn_prediction };
+ * Call the Flask ML API.  Falls back to the rule-based model if Flask is down.
  */
-function runPrediction(features) {
+async function runPrediction(features) {
+  try {
+    const body = JSON.stringify(features);
+    const result = await new Promise((resolve, reject) => {
+      const url  = new URL('/predict', ML_API_URL);
+      const opts = {
+        hostname: url.hostname,
+        port:     url.port || 5000,
+        path:     url.pathname,
+        method:   'POST',
+        headers:  { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+        timeout:  5000,
+      };
+      const req = http.request(opts, (res) => {
+        let data = '';
+        res.on('data', (chunk) => { data += chunk; });
+        res.on('end', () => {
+          try { resolve(JSON.parse(data)); }
+          catch (e) { reject(new Error('Invalid JSON from ML API')); }
+        });
+      });
+      req.on('error',   reject);
+      req.on('timeout', () => { req.destroy(); reject(new Error('ML API timeout')); });
+      req.write(body);
+      req.end();
+    });
+
+    return {
+      probability: result.churn_probability,
+      prediction:  result.churn_prediction,
+      source:      'flask',
+    };
+  } catch (err) {
+    console.warn(`[ML API unavailable — using fallback] ${err.message}`);
+    return runFallbackPrediction(features);
+  }
+}
+
+/** Rule-based fallback used when the Flask API is unreachable. */
+function runFallbackPrediction(features) {
   const {
     customer_support_calls = 0,
     maximum_days_inactive  = 0,
@@ -66,18 +103,16 @@ function runPrediction(features) {
     videos_watched         = 30,
   } = features;
 
-  // Weighted scoring (mirrors Random Forest feature importances from SRS)
   let score = 0;
   score += customer_support_calls * 0.31;
   score += maximum_days_inactive  * 0.024;
   score -= weekly_mins_watched    * 0.003;
   score -= no_of_days_subscribed  * 0.001;
   score -= videos_watched         * 0.005;
-  score += 0.15; // base rate
+  score += 0.15;
 
   const probability = Math.min(0.98, Math.max(0.02, parseFloat(score.toFixed(4))));
-  const prediction  = probability >= 0.5 ? 1 : 0;
-  return { probability, prediction };
+  return { probability, prediction: probability >= 0.5 ? 1 : 0, source: 'fallback' };
 }
 
 function getRiskCategory(prob) {
@@ -251,7 +286,7 @@ router.post('/predict', async (req, res) => {
       videos_watched:         parseInt(videos_watched)          || 0,
     };
 
-    const { probability, prediction } = runPrediction(features);
+    const { probability, prediction, source } = await runPrediction(features);
     const risk     = getRiskCategory(probability);
     const strategy = getStrategy(risk);
 
@@ -338,7 +373,7 @@ router.post('/upload', upload.single('dataset'), async (req, res) => {
           videos_watched:         parseInt(row.videos_watched)          || 0,
         };
 
-        const { probability, prediction } = runPrediction(features);
+        const { probability, prediction, source } = await runPrediction(features);
         const risk     = getRiskCategory(probability);
         const strategy = getStrategy(risk);
 
@@ -349,7 +384,7 @@ router.post('/upload', upload.single('dataset'), async (req, res) => {
           churn_probability:    probability,
           risk_category:        risk,
           recommended_strategy: strategy,
-          model_used:           'Random Forest',
+          model_used:           source === 'flask' ? 'Random Forest (ML)' : 'Rule-based Fallback',
           model_version:        '1.0',
           input_snapshot:       features,
           predicted_by:         req.user._id,

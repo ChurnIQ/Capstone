@@ -261,3 +261,11 @@ The `Jenkinsfile` at the repo root defines a 5-stage pipeline:
 ## License
 
 ISC
+
+---
+
+## Contribution
+
+Minor documentation update by Suhani Saxena for project evaluation.
+
+

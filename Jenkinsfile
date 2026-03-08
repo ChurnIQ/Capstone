@@ -7,20 +7,17 @@ pipeline {
     stages {
         stage('Clone') {
             steps {
-                checkout scm
+                // This replaces 'Checkout' to match your goal screenshot
+                git branch: 'main', url: 'https://github.com/mitratobi/Capstone.git'
             }
         }
         stage('Deploy') {
             steps {
-                // 'bat' is the secret to making this fast on Windows
+                // 'bat' makes this take seconds instead of 6 minutes!
                 bat 'npm install'
                 bat "docker build -t ${IMAGE_NAME}:latest ."
-                
-                // Fast cleanup
                 bat "docker stop ${CONTAINER_NAME} || ver > nul"
                 bat "docker rm ${CONTAINER_NAME} || ver > nul"
-                
-                // Direct run
                 bat "docker run -d --name ${CONTAINER_NAME} -p 3000:3000 ${IMAGE_NAME}:latest"
             }
         }

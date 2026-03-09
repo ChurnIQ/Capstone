@@ -1,5 +1,8 @@
 # ChurnIQ — Customer Churn Prediction Dashboard
-
+## Tech Stack
+- **Frontend/Backend:** Node.js
+- **CI/CD:** Jenkins (Builds #7-9 verified green)
+- **Deployment:** Docker
 A full-stack web application for predicting and managing customer churn. Features authentication, a data-driven analytics dashboard, a Flask ML API powered by a trained Random Forest model, and a Jenkins CI/CD pipeline — all containerized with Docker.
 
 ![Node.js](https://img.shields.io/badge/Node.js-22+-green)

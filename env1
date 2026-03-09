@@ -1,0 +1,5 @@
+PORT=3000
+MONGODB_URI=your_mongodb_uri_here
+SESSION_SECRET=your_secret_here
+GOOGLE_CLIENT_ID=your_client_id
+GOOGLE_CLIENT_SECRET=your_secret

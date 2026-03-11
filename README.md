@@ -1,4 +1,3 @@
-# xyz
 # ChurnIQ — Customer Churn Prediction Dashboard
 ## Tech Stack
 - **Frontend/Backend:** Node.js
@@ -267,6 +266,7 @@ The `Jenkinsfile` at the repo root defines a 5-stage pipeline:
 ISC
 
 ---
+
 
 
 

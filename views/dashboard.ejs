@@ -176,8 +176,6 @@
     .mini-dash-label { font-size: 10px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.7px; }
     .mini-dash-value { font-size: 22px; font-weight: 900; color: #333; margin: 5px 0 2px; letter-spacing: -0.5px; }
     .mini-dash-sub { font-size: 11px; color: var(--text-muted); }
-    .live-counter-box { padding: 11px 14px; border-radius: 10px; background: rgba(102,126,234,0.05); border: 1px solid rgba(102,126,234,0.18); }
-    #live-counter { font-size: 13px; color: #667eea; font-weight: 700; }
     .bd-upload-zone { border: 1.5px dashed #c5cbe8; border-radius: 10px; padding: 22px; text-align: center; background: rgba(102,126,234,0.02); margin-bottom: 14px; }
   </style>
 </head>
@@ -389,10 +387,6 @@
                 <div class="mini-dash-value" id="bd-total">—</div>
                 <div class="mini-dash-sub">records in system</div>
               </div>
-            </div>
-            <div class="live-counter-box">
-              <div style="font-size:10px;color:var(--text-dim);font-weight:700;letter-spacing:0.7px;text-transform:uppercase;margin-bottom:5px;">Live Counter</div>
-              <div id="live-counter">Users processed: initializing…</div>
             </div>
           </div>
 
@@ -667,8 +661,6 @@ function animateNumber(id, target, decimals, suffix) {
 function esc(str) { return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 // ── Big Data tab ──────────────────────────────────────────────────────────────
-let liveCounterInterval = null;
-
 async function loadBigData() {
   await loadBatchStats();
 }
@@ -679,19 +671,7 @@ async function loadBatchStats() {
     document.getElementById('bd-churn-rate').textContent = stats.avgChurnRate + '%';
     document.getElementById('bd-high-risk').textContent  = stats.highRiskCount.toLocaleString();
     document.getElementById('bd-total').textContent      = stats.totalProcessed.toLocaleString();
-    startLiveCounter(stats.totalProcessed);
   } catch (_) {}
-}
-
-function startLiveCounter(base) {
-  const el = document.getElementById('live-counter');
-  if (!el) return;
-  let count = parseInt(base) || 0;
-  if (liveCounterInterval) clearInterval(liveCounterInterval);
-  liveCounterInterval = setInterval(() => {
-    count += Math.floor(Math.random() * 3);
-    el.textContent = 'Users processed: ' + count.toLocaleString() + '…';
-  }, 1200);
 }
 
 function setDatasetMode(mode, btn) {

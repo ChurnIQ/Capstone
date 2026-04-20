@@ -45,7 +45,7 @@ pipeline {
 
     post {
         success {
-            sh "echo 'Pipeline succeeded. ChurnIQ is live at http://'$(hostname -I | awk '{print $1}')':3000'"
+            sh 'echo "Pipeline succeeded. ChurnIQ is live at http://$(hostname -I | awk \'{print $1}\'):3000"'
         }
         failure {
             echo 'Pipeline failed. Check logs above.'

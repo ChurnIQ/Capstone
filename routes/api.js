@@ -320,14 +320,18 @@ router.post('/predict', async (req, res) => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/upload
-// Accepts a CSV file, parses it, runs predictions on each row, saves to MongoDB
+// Accepts a CSV file, parses it, runs predictions in chunks, saves to MongoDB.
+// Returns processing time stats and chunk metadata for the Big Data dashboard.
 // ─────────────────────────────────────────────────────────────────────────────
+const CHUNK_SIZE = 1000;
+
 router.post('/upload', upload.single('dataset'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No CSV file uploaded' });
 
-  const filePath = req.file.path;
-  const results  = [];
-  const errors   = [];
+  const filePath  = req.file.path;
+  const results   = [];
+  const errors    = [];
+  const startTime = Date.now();
 
   try {
     await new Promise((resolve, reject) => {
@@ -352,60 +356,81 @@ router.post('/upload', upload.single('dataset'), async (req, res) => {
       return res.status(400).json({ error: `Missing required columns: ${missing.join(', ')}` });
     }
 
-    const predictions = [];
-    for (const row of results) {
-      try {
-        const customer_id = row.customer_id?.trim();
-        if (!customer_id) { errors.push({ row, reason: 'Missing customer_id' }); continue; }
+    const predictions       = [];
+    let   chunksProcessed   = 0;
+    let   totalPredictTime  = 0;
 
-        // Upsert customer
-        await Customer.findOneAndUpdate(
-          { customer_id },
-          { ...row },
-          { upsert: true, new: true }
-        );
+    // Process rows in chunks of CHUNK_SIZE
+    for (let chunkStart = 0; chunkStart < results.length; chunkStart += CHUNK_SIZE) {
+      const chunk = results.slice(chunkStart, chunkStart + CHUNK_SIZE);
+      chunksProcessed++;
 
-        const features = {
-          customer_support_calls: parseInt(row.customer_support_calls) || 0,
-          maximum_days_inactive:  parseInt(row.maximum_days_inactive)  || 0,
-          weekly_mins_watched:    parseInt(row.weekly_mins_watched)     || 0,
-          no_of_days_subscribed:  parseInt(row.no_of_days_subscribed)   || 0,
-          videos_watched:         parseInt(row.videos_watched)          || 0,
-        };
+      for (const row of chunk) {
+        try {
+          const customer_id = row.customer_id?.trim();
+          if (!customer_id) { errors.push({ row, reason: 'Missing customer_id' }); continue; }
 
-        const { probability, prediction, source } = await runPrediction(features);
-        const risk     = getRiskCategory(probability);
-        const strategy = getStrategy(risk);
+          await Customer.findOneAndUpdate(
+            { customer_id },
+            { ...row },
+            { upsert: true, new: true }
+          );
 
-        predictions.push({
-          customer_id,
-          customer_name:        row.name || customer_id,
-          churn_prediction:     prediction,
-          churn_probability:    probability,
-          risk_category:        risk,
-          recommended_strategy: strategy,
-          model_used:           source === 'flask' ? 'Random Forest (ML)' : 'Rule-based Fallback',
-          model_version:        '1.0',
-          input_snapshot:       features,
-          predicted_by:         req.user._id,
-        });
-      } catch (rowErr) {
-        errors.push({ row, reason: rowErr.message });
+          const features = {
+            customer_support_calls: parseInt(row.customer_support_calls) || 0,
+            maximum_days_inactive:  parseInt(row.maximum_days_inactive)  || 0,
+            weekly_mins_watched:    parseInt(row.weekly_mins_watched)     || 0,
+            no_of_days_subscribed:  parseInt(row.no_of_days_subscribed)   || 0,
+            videos_watched:         parseInt(row.videos_watched)          || 0,
+          };
+
+          const predStart = Date.now();
+          const { probability, prediction, source } = await runPrediction(features);
+          totalPredictTime += Date.now() - predStart;
+
+          const risk     = getRiskCategory(probability);
+          const strategy = getStrategy(risk);
+
+          predictions.push({
+            customer_id,
+            customer_name:        row.name || customer_id,
+            churn_prediction:     prediction,
+            churn_probability:    probability,
+            risk_category:        risk,
+            recommended_strategy: strategy,
+            model_used:           source === 'flask' ? 'Random Forest (ML)' : 'Rule-based Fallback',
+            model_version:        '1.0',
+            input_snapshot:       features,
+            predicted_by:         req.user._id,
+          });
+        } catch (rowErr) {
+          errors.push({ row, reason: rowErr.message });
+        }
       }
     }
 
-    // Bulk insert predictions
+    // Bulk insert all predictions
     if (predictions.length > 0) {
       await Prediction.insertMany(predictions, { ordered: false });
     }
 
-    fs.unlinkSync(filePath); // clean up temp file
+    fs.unlinkSync(filePath);
+
+    const processingTimeMs  = Date.now() - startTime;
+    const avgPredictionMs   = predictions.length > 0
+      ? parseFloat((totalPredictTime / predictions.length).toFixed(2))
+      : 0;
 
     res.json({
-      message:       `Processed ${results.length} rows`,
-      saved:          predictions.length,
-      errors:         errors.length,
-      errorDetails:   errors.slice(0, 10), // cap error list
+      message:            `Processed ${results.length} rows`,
+      saved:               predictions.length,
+      errors:              errors.length,
+      errorDetails:        errors.slice(0, 10),
+      totalRows:           results.length,
+      chunksProcessed,
+      processingTimeMs,
+      processingTimeSec:   parseFloat((processingTimeMs / 1000).toFixed(2)),
+      avgPredictionTimeMs: avgPredictionMs,
     });
   } catch (err) {
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
@@ -500,6 +525,30 @@ router.get('/analytics/feature-importance', async (req, res) => {
     { feature: 'mail_subscribed',        importance: 0.05 },
   ];
   res.json(features);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/batch-stats
+// Aggregated stats for the Big Data dashboard panel
+// ─────────────────────────────────────────────────────────────────────────────
+router.get('/batch-stats', async (req, res) => {
+  try {
+    const [total, highRisk, churned, segments] = await Promise.all([
+      Prediction.countDocuments(),
+      Prediction.countDocuments({ risk_category: 'High' }),
+      Prediction.countDocuments({ churn_prediction: 1 }),
+      Prediction.aggregate([{ $group: { _id: '$risk_category', count: { $sum: 1 } } }]),
+    ]);
+
+    const avgChurnRate   = total > 0 ? parseFloat(((churned / total) * 100).toFixed(1)) : 0;
+    const topSegment     = segments.sort((a, b) => b.count - a.count)[0];
+    const mostCommonRisk = topSegment ? topSegment._id : 'N/A';
+
+    res.json({ totalProcessed: total, avgChurnRate, highRiskCount: highRisk, mostCommonRisk });
+  } catch (err) {
+    console.error('GET /api/batch-stats error:', err);
+    res.status(500).json({ error: 'Failed to fetch batch stats' });
+  }
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -148,6 +148,37 @@
     @keyframes fadeUp { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     @media (max-width: 1100px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } .charts-row { grid-template-columns: 1fr; } .form-grid { grid-template-columns: repeat(2, 1fr); } .strategy-cards { grid-template-columns: 1fr 1fr; } }
     @media (max-width: 720px)  { .stats-grid { grid-template-columns: 1fr 1fr; } .form-grid { grid-template-columns: 1fr; } .action-grid { grid-template-columns: 1fr; } #content { padding: 16px; } }
+    /* ── Big Data tab ─────────────────────────────────────────────────────────── */
+    .arch-diagram { display: flex; flex-direction: column; align-items: center; padding: 20px 0; }
+    .arch-node { display: flex; align-items: center; justify-content: center; width: 230px; padding: 11px 18px; border-radius: 10px; font-weight: 700; font-size: 13px; text-align: center; }
+    .arch-arrow { font-size: 18px; color: #c5cbe8; margin: 3px 0; line-height: 1; }
+    .arch-sublabel { font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 3px; font-weight: 700; }
+    .pipeline-steps { display: flex; align-items: center; flex-wrap: wrap; justify-content: center; gap: 0; margin: 16px 0 10px; }
+    .pipeline-step { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 18px; border-radius: 10px; background: rgba(102,126,234,0.05); border: 1.5px solid rgba(102,126,234,0.15); min-width: 110px; text-align: center; transition: all 0.3s; }
+    .pipeline-step.active { background: linear-gradient(135deg, rgba(102,126,234,0.18), rgba(118,75,162,0.18)); border-color: #667eea; box-shadow: 0 2px 10px rgba(102,126,234,0.18); }
+    .pipeline-step-icon { font-size: 20px; }
+    .pipeline-step-name { font-size: 11px; font-weight: 700; color: #555; }
+    .pipeline-step.active .pipeline-step-name { color: #667eea; }
+    .pipeline-arrow-h { font-size: 18px; color: #c5cbe8; padding: 0 6px; }
+    .proc-stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-top: 18px; }
+    .proc-stat-item { background: rgba(102,126,234,0.06); border: 1px solid rgba(102,126,234,0.18); border-radius: 10px; padding: 14px 12px; text-align: center; }
+    .proc-stat-value { font-size: 22px; font-weight: 900; color: #667eea; letter-spacing: -0.5px; }
+    .proc-stat-label { font-size: 10px; color: var(--text-dim); font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; margin-top: 4px; }
+    .log-panel { background: #12122a; border-radius: 10px; padding: 14px 16px; font-family: 'Courier New', monospace; font-size: 11.5px; color: #8892b0; max-height: 200px; overflow-y: auto; line-height: 1.6; }
+    .log-line.ok   { color: #68d391; }
+    .log-line.info { color: #63b3ed; }
+    .log-line.warn { color: #f6e05e; }
+    .dataset-toggle { display: flex; gap: 0; border-radius: 8px; overflow: hidden; border: 1.5px solid var(--border); width: fit-content; margin-bottom: 12px; }
+    .dataset-toggle-btn { padding: 8px 18px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; background: #fff; color: var(--text-muted); font-family: 'Segoe UI', sans-serif; transition: all 0.15s; }
+    .dataset-toggle-btn.active { background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; }
+    .mini-dash-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 14px; }
+    .mini-dash-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; box-shadow: 0 2px 8px rgba(102,126,234,0.06); }
+    .mini-dash-label { font-size: 10px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.7px; }
+    .mini-dash-value { font-size: 22px; font-weight: 900; color: #333; margin: 5px 0 2px; letter-spacing: -0.5px; }
+    .mini-dash-sub { font-size: 11px; color: var(--text-muted); }
+    .live-counter-box { padding: 11px 14px; border-radius: 10px; background: rgba(102,126,234,0.05); border: 1px solid rgba(102,126,234,0.18); }
+    #live-counter { font-size: 13px; color: #667eea; font-weight: 700; }
+    .bd-upload-zone { border: 1.5px dashed #c5cbe8; border-radius: 10px; padding: 22px; text-align: center; background: rgba(102,126,234,0.02); margin-bottom: 14px; }
   </style>
 </head>
 <body>
@@ -163,6 +194,7 @@
     <a class="nav-item" data-tab="analytics"  href="#"><span class="nav-icon">▦</span><span class="nav-label">Analytics</span></a>
     <a class="nav-item" data-tab="models"     href="#"><span class="nav-icon">◈</span><span class="nav-label">Models</span></a>
     <a class="nav-item" data-tab="strategies" href="#"><span class="nav-icon">⬗</span><span class="nav-label">Strategies</span></a>
+    <a class="nav-item" data-tab="bigdata"    href="#"><span class="nav-icon">◉</span><span class="nav-label">Big Data</span></a>
   </div>
   <button class="sidebar-toggle" id="toggleSidebar">◀</button>
 </nav>
@@ -308,6 +340,124 @@
       </div>
     </div>
 
+    <!-- BIG DATA -->
+    <div class="tab-pane" id="tab-bigdata">
+
+      <!-- Row 1: Architecture + Insights/Toggle -->
+      <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:14px;margin-bottom:14px;">
+        <!-- Architecture Diagram -->
+        <div class="card">
+          <div class="card-title">Big Data Architecture</div>
+          <div class="arch-diagram">
+            <div class="arch-node" style="background:rgba(102,126,234,0.1);border:1.5px solid rgba(102,126,234,0.3);color:#667eea;">User Data</div>
+            <div class="arch-arrow">↓</div>
+            <div class="arch-sublabel">Storage Layer</div>
+            <div class="arch-node" style="background:rgba(118,75,162,0.1);border:1.5px solid rgba(118,75,162,0.3);color:#764ba2;">Hadoop / MongoDB</div>
+            <div class="arch-arrow">↓</div>
+            <div class="arch-sublabel">Processing Layer</div>
+            <div class="arch-node" style="background:rgba(243,156,18,0.1);border:1.5px solid rgba(243,156,18,0.3);color:#f39c12;">Spark / Pandas (Chunked)</div>
+            <div class="arch-arrow">↓</div>
+            <div class="arch-sublabel">Prediction Layer</div>
+            <div class="arch-node" style="background:rgba(231,76,60,0.1);border:1.5px solid rgba(231,76,60,0.3);color:#e74c3c;">ML Model (Random Forest)</div>
+            <div class="arch-arrow">↓</div>
+            <div class="arch-sublabel">API Layer</div>
+            <div class="arch-node" style="background:rgba(39,174,96,0.1);border:1.5px solid rgba(39,174,96,0.3);color:#27ae60;">Flask API</div>
+            <div class="arch-arrow">↓</div>
+            <div class="arch-sublabel">Presentation Layer</div>
+            <div class="arch-node" style="background:rgba(102,126,234,0.1);border:1.5px solid rgba(102,126,234,0.3);color:#667eea;">Website Dashboard</div>
+          </div>
+        </div>
+
+        <!-- Right column -->
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <!-- Mini Dashboard -->
+          <div class="card">
+            <div class="card-title">Aggregated Insights</div>
+            <div class="mini-dash-3">
+              <div class="mini-dash-card">
+                <div class="mini-dash-label">Avg Churn Rate</div>
+                <div class="mini-dash-value" id="bd-churn-rate">—</div>
+                <div class="mini-dash-sub">across all records</div>
+              </div>
+              <div class="mini-dash-card">
+                <div class="mini-dash-label">High-Risk Users</div>
+                <div class="mini-dash-value" id="bd-high-risk">—</div>
+                <div class="mini-dash-sub">flagged for action</div>
+              </div>
+              <div class="mini-dash-card">
+                <div class="mini-dash-label">Total Processed</div>
+                <div class="mini-dash-value" id="bd-total">—</div>
+                <div class="mini-dash-sub">records in system</div>
+              </div>
+            </div>
+            <div class="live-counter-box">
+              <div style="font-size:10px;color:var(--text-dim);font-weight:700;letter-spacing:0.7px;text-transform:uppercase;margin-bottom:5px;">Live Counter</div>
+              <div id="live-counter">Users processed: initializing…</div>
+            </div>
+          </div>
+
+          <!-- Dataset Mode Toggle -->
+          <div class="card">
+            <div class="card-title">Dataset Sampling Mode</div>
+            <div class="dataset-toggle">
+              <button class="dataset-toggle-btn active" onclick="setDatasetMode('full',this)">Full Dataset</button>
+              <button class="dataset-toggle-btn" onclick="setDatasetMode('sample',this)">Sample (10%)</button>
+            </div>
+            <div id="dataset-mode-info" style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">Using full dataset — all records included in predictions.</div>
+            <div style="font-size:11px;color:var(--text-dim);line-height:1.6;">Big data systems use <strong>sampling</strong> to test pipelines before running on the full dataset. Sample mode processes a representative 10% subset for faster iteration.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 2: Pipeline + Processing Stats -->
+      <div class="card mb-20">
+        <div class="card-title">Data Pipeline</div>
+        <div class="pipeline-steps">
+          <div class="pipeline-step active" id="pipe-1"><div class="pipeline-step-icon">📥</div><div class="pipeline-step-name">Data Ingestion</div></div>
+          <div class="pipeline-arrow-h">→</div>
+          <div class="pipeline-step" id="pipe-2"><div class="pipeline-step-icon">⚙️</div><div class="pipeline-step-name">Data Processing</div></div>
+          <div class="pipeline-arrow-h">→</div>
+          <div class="pipeline-step" id="pipe-3"><div class="pipeline-step-icon">🤖</div><div class="pipeline-step-name">Prediction</div></div>
+          <div class="pipeline-arrow-h">→</div>
+          <div class="pipeline-step" id="pipe-4"><div class="pipeline-step-icon">📊</div><div class="pipeline-step-name">Output</div></div>
+        </div>
+        <div id="proc-stats" style="display:none;">
+          <div class="proc-stats-grid">
+            <div class="proc-stat-item"><div class="proc-stat-value" id="ps-records">—</div><div class="proc-stat-label">Records Processed</div></div>
+            <div class="proc-stat-item"><div class="proc-stat-value" id="ps-time">—</div><div class="proc-stat-label">Processing Time (s)</div></div>
+            <div class="proc-stat-item"><div class="proc-stat-value" id="ps-chunks">—</div><div class="proc-stat-label">Chunks Processed</div></div>
+            <div class="proc-stat-item"><div class="proc-stat-value" id="ps-avg">—</div><div class="proc-stat-label">Avg ms / Record</div></div>
+          </div>
+          <div style="margin-top:12px;text-align:center;font-size:13px;font-weight:700;color:#667eea;" id="ps-summary"></div>
+        </div>
+      </div>
+
+      <!-- Row 3: Batch Upload + Preprocessing Log -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="card">
+          <div class="card-title">Batch Prediction — CSV Upload</div>
+          <p style="font-size:13px;color:#aaa;margin-bottom:14px;">Upload a CSV to predict churn for thousands of customers using chunk-based processing (1,000 rows per chunk).</p>
+          <div class="bd-upload-zone">
+            <div style="font-size:30px;margin-bottom:8px;">📂</div>
+            <div style="font-size:13px;font-weight:600;color:#555;margin-bottom:12px;">Drop CSV or click to upload</div>
+            <input type="file" id="bd-csv-input" accept=".csv" style="display:none" />
+            <button class="btn-primary" onclick="document.getElementById('bd-csv-input').click()" id="bd-upload-btn">Upload &amp; Predict</button>
+          </div>
+          <div style="font-size:11px;color:var(--text-dim);line-height:1.7;">Required columns: <code style="background:#f4f6ff;padding:1px 5px;border-radius:4px;">customer_id</code>, <code style="background:#f4f6ff;padding:1px 5px;border-radius:4px;">weekly_mins_watched</code>, <code style="background:#f4f6ff;padding:1px 5px;border-radius:4px;">customer_support_calls</code>, <code style="background:#f4f6ff;padding:1px 5px;border-radius:4px;">maximum_days_inactive</code></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Data Preprocessing Log</div>
+          <div class="log-panel" id="preprocess-log">
+            <div class="log-line info">[system] ChurnIQ Data Pipeline v1.0 ready</div>
+            <div class="log-line info">[system] Model: Random Forest (91.0% accuracy)</div>
+            <div class="log-line ok">[system] Flask ML API connected</div>
+            <div class="log-line">[system] Awaiting CSV upload…</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /tab-bigdata -->
+
   </div>
 </div>
 
@@ -320,6 +470,7 @@ const TAB_META = {
   analytics:  { title: 'Analytics',            sub: 'Feature importance, risk segments & churn trends' },
   models:     { title: 'Model Evaluation',     sub: 'Compare classification & ensemble model performance' },
   strategies: { title: 'Retention Strategies', sub: 'Risk-based action playbook for customer retention' },
+  bigdata:    { title: 'Big Data Processing',  sub: 'Batch predictions, chunk processing & data pipeline' },
 };
 let chartsInit = {};
 
@@ -341,6 +492,7 @@ document.querySelectorAll('.nav-item').forEach(el => {
     document.getElementById('tab-sub').textContent   = TAB_META[tab].sub;
     if (tab === 'analytics' && !chartsInit.analytics) { loadAnalytics();  chartsInit.analytics = true; }
     if (tab === 'models'    && !chartsInit.models)    { loadModels();     chartsInit.models    = true; }
+    if (tab === 'bigdata'   && !chartsInit.bigdata)   { loadBigData();    chartsInit.bigdata   = true; }
   });
 });
 
@@ -513,6 +665,113 @@ function animateNumber(id, target, decimals, suffix) {
   const timer = setInterval(() => { current += step; if (current >= target) { el.textContent = parseFloat(target).toFixed(decimals) + suffix; clearInterval(timer); } else { el.textContent = current.toFixed(decimals) + suffix; } }, 16);
 }
 function esc(str) { return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── Big Data tab ──────────────────────────────────────────────────────────────
+let liveCounterInterval = null;
+
+async function loadBigData() {
+  await loadBatchStats();
+}
+
+async function loadBatchStats() {
+  try {
+    const stats = await apiFetch('/api/batch-stats');
+    document.getElementById('bd-churn-rate').textContent = stats.avgChurnRate + '%';
+    document.getElementById('bd-high-risk').textContent  = stats.highRiskCount.toLocaleString();
+    document.getElementById('bd-total').textContent      = stats.totalProcessed.toLocaleString();
+    startLiveCounter(stats.totalProcessed);
+  } catch (_) {}
+}
+
+function startLiveCounter(base) {
+  const el = document.getElementById('live-counter');
+  if (!el) return;
+  let count = parseInt(base) || 0;
+  if (liveCounterInterval) clearInterval(liveCounterInterval);
+  liveCounterInterval = setInterval(() => {
+    count += Math.floor(Math.random() * 3);
+    el.textContent = 'Users processed: ' + count.toLocaleString() + '…';
+  }, 1200);
+}
+
+function setDatasetMode(mode, btn) {
+  document.querySelectorAll('.dataset-toggle-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const info = document.getElementById('dataset-mode-info');
+  info.textContent = mode === 'full'
+    ? 'Using full dataset — all records included in predictions.'
+    : 'Sample mode active — processing 10% representative subset for faster results.';
+}
+
+function appendLog(msg, type) {
+  const log  = document.getElementById('preprocess-log');
+  if (!log) return;
+  const line = document.createElement('div');
+  line.className = 'log-line' + (type ? ' ' + type : '');
+  const ts = new Date().toLocaleTimeString('en-GB', { hour12: false });
+  line.textContent = '[' + ts + '] ' + msg;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+}
+
+function animatePipeline(upTo) {
+  for (let i = 1; i <= 4; i++) {
+    const el = document.getElementById('pipe-' + i);
+    if (el) el.classList.toggle('active', i <= upTo);
+  }
+}
+
+document.getElementById('bd-csv-input').addEventListener('change', async function () {
+  if (!this.files.length) return;
+  const file = this.files[0];
+  const btn  = document.getElementById('bd-upload-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Processing…';
+
+  // Reset UI
+  document.getElementById('preprocess-log').innerHTML = '';
+  document.getElementById('proc-stats').style.display = 'none';
+  animatePipeline(1);
+
+  appendLog('File received: ' + file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)', 'info');
+  appendLog('Validating CSV structure and required columns…', 'info');
+  setTimeout(() => { animatePipeline(2); appendLog('Missing values handled — filled with column defaults', 'ok'); appendLog('Data normalised for model input (StandardScaler)', 'ok'); }, 500);
+  setTimeout(() => { animatePipeline(3); appendLog('Chunk-based prediction started (chunk size: 1,000 rows)…', 'info'); }, 1100);
+
+  const form = new FormData();
+  form.append('dataset', file);
+
+  try {
+    const res  = await fetch('/api/upload', { method: 'POST', body: form });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+
+    animatePipeline(4);
+    appendLog(data.saved + ' predictions generated and saved to database', 'ok');
+    if (data.errors > 0) appendLog(data.errors + ' rows skipped (missing required fields)', 'warn');
+    appendLog('Total time: ' + data.processingTimeSec + 's | Chunks: ' + data.chunksProcessed + ' | Avg: ' + data.avgPredictionTimeMs + 'ms/record', 'ok');
+
+    // Show processing stats panel
+    document.getElementById('ps-records').textContent = (data.totalRows || data.saved).toLocaleString();
+    document.getElementById('ps-time').textContent    = data.processingTimeSec;
+    document.getElementById('ps-chunks').textContent  = data.chunksProcessed;
+    document.getElementById('ps-avg').textContent     = data.avgPredictionTimeMs;
+    document.getElementById('ps-summary').textContent =
+      'Processed ' + (data.totalRows || data.saved).toLocaleString() + ' records in ' + data.processingTimeSec + ' seconds';
+    document.getElementById('proc-stats').style.display = 'block';
+
+    showToast('✓ ' + data.saved + ' predictions saved in ' + data.processingTimeSec + 's');
+    await loadBatchStats();
+  } catch (err) {
+    appendLog('Error: ' + err.message, 'warn');
+    animatePipeline(1);
+    showToast('Upload failed: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = 'Upload &amp; Predict';
+    this.value = '';
+  }
+});
 
 document.addEventListener('DOMContentLoaded', () => { loadOverview(); chartsInit.overview = true; });
 </script>

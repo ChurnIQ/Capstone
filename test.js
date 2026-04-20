@@ -112,8 +112,23 @@ describe('HTTP — Node.js app (:3000)', () => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 3. HTTP — Flask ML API (port 5000)
+// Skips gracefully if Flask is not running (e.g. in CI before Docker build)
 // ─────────────────────────────────────────────────────────────────────────────
-describe('HTTP — Flask ML API (:5000)', () => {
+async function flaskRunning() {
+  return new Promise((resolve) => {
+    const req = http.get('http://localhost:5000/health', () => resolve(true));
+    req.on('error', () => resolve(false));
+    req.setTimeout(2000, () => { req.destroy(); resolve(false); });
+  });
+}
+
+describe('HTTP — Flask ML API (:5000)', async () => {
+  const skipFlask = !(await flaskRunning());
+  if (skipFlask) {
+    it('Flask API tests', { skip: 'Flask not running — skipped in CI (runs inside Docker)' }, () => {});
+    return;
+  }
+
   it('GET /health returns 200', async () => {
     const res = await get('http://localhost:5000/health');
     assert.strictEqual(res.status, 200, `Flask health check failed: ${res.body}`);

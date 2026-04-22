@@ -1,7 +1,6 @@
 import os
 import joblib
 import pandas as pd
-from retention_strategies import get_retention_strategy, risk_category
 
 FEATURES = [
     'age',
@@ -55,17 +54,7 @@ class PredictionEngine:
         if self.scaler:
             X = pd.DataFrame(self.scaler.transform(X), columns=FEATURES)
 
-    def _build_response(self, probability: float, customer_id: str = None) -> dict:
-        strategy = get_retention_strategy(probability)
-        result = {
-            'churn_prediction':     int(probability >= 0.5),
-            'churn_probability':    round(float(probability), 4),
-            'risk_category':        strategy['risk_category'],
-            'recommended_strategy': strategy['recommended_strategy'],
-        }
-        if customer_id is not None:
-            result['customer_id'] = customer_id
-        return result
+        return X, row
 
     def _risk_category(self, prob):
         if prob >= 0.7:

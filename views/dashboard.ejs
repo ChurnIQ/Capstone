@@ -272,7 +272,12 @@
             <div><div class="stat-label" style="margin-bottom:8px;">Churn Probability</div><div class="result-prob" id="result-prob">—</div><div class="result-prob-label">Predicted by Random Forest</div></div>
             <div class="result-right"><div id="result-risk-tag"></div><div style="margin-top:12px;"><div class="result-label-title">Prediction</div><div class="result-churn" id="result-churn-label">—</div></div></div>
           </div>
-          <div class="strategy-box"><div class="strategy-box-label">Recommended Retention Strategy</div><div class="strategy-box-text" id="result-strategy">—</div></div>
+          <div class="strategy-box">
+            <div class="strategy-box-label">Churn Reasons</div>
+            <div class="strategy-box-text" id="result-reasons" style="color:#e74c3c;margin-bottom:10px;">—</div>
+            <div class="strategy-box-label">Recommended Retention Strategies</div>
+            <div class="strategy-box-text" id="result-strategy">—</div>
+          </div>
         </div>
       </div>
 
@@ -598,7 +603,28 @@ async function loadPredictions(page) {
 async function runPrediction() {
   const form = document.getElementById('predict-form');
   const btn  = document.getElementById('predict-btn');
-
+  if (!form.reportValidity()) return;
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Predicting…';
+  const payload = Object.fromEntries(new FormData(form).entries());
+  try {
+    const result = await apiFetch('/api/predict', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const pct    = (result.churn_probability * 100).toFixed(1);
+    const color  = result.risk_category === 'High' ? '#e74c3c' : result.risk_category === 'Medium' ? '#f39c12' : '#27ae60';
+    const card   = document.getElementById('result-card');
+    card.className = result.risk_category; card.style.display = 'block';
+    document.getElementById('result-prob').textContent        = pct + '%';
+    document.getElementById('result-prob').style.color        = color;
+    document.getElementById('result-churn-label').textContent = result.churn_prediction ? 'Will Churn' : 'Will Retain';
+    document.getElementById('result-churn-label').style.color = color;
+    document.getElementById('result-risk-tag').innerHTML      = '<span class="risk-tag ' + result.risk_category + '">' + result.risk_category + ' Risk</span>';
+    const reasons    = Array.isArray(result.churn_reasons) ? result.churn_reasons : [];
+    const strategies = Array.isArray(result.recommended_strategies) ? result.recommended_strategies : (result.recommended_strategy ? [result.recommended_strategy] : []);
+    document.getElementById('result-reasons').textContent  = reasons.length ? reasons.join(' · ') : 'No specific reasons identified';
+    document.getElementById('result-strategy').innerHTML   = strategies.length ? strategies.map(s => '• ' + esc(s)).join('<br>') : '—';
+    showToast('Prediction complete — ' + result.risk_category + ' risk');
+  } catch (err) { showToast('Prediction failed: ' + err.message, 'error'); }
+  finally { btn.disabled = false; btn.innerHTML = '⚡ Run Prediction'; }
+}
 
 async function loadAnalytics() {
   try {

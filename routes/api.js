@@ -62,13 +62,17 @@ async function runPrediction(features) {
       req.end();
     });
 
-    return {
-      probability: result.churn_probability,
-      prediction: result.churn_prediction
-    };
+    if (result.error) throw new Error(result.error);
+    return result;
 
   } catch {
-    return { probability: 0.5, prediction: 0 };
+    return {
+      churn_probability: 0.5,
+      churn_prediction: 0,
+      risk_category: 'Low',
+      churn_reasons: [],
+      recommended_strategies: ['Newsletter engagement']
+    };
   }
 }
 
@@ -139,23 +143,19 @@ router.post('/predict', async (req, res) => {
   try {
     const data = req.body;
 
-    const { probability, prediction } = await runPrediction(data);
-
-    let risk = 'Low';
-    if (probability >= 0.7) risk = 'High';
-    else if (probability >= 0.4) risk = 'Medium';
+    const result = await runPrediction(data);
 
     const record = await Prediction.create({
-      customer_id: data.customer_id,
-      customer_name: data.customer_name || 'Unknown',
-      churn_prediction: prediction,
-      churn_probability: probability,
-      risk_category: risk,
-      recommended_strategy: 'Auto-generated',
-      createdAt: new Date()
+      customer_id:            data.customer_id,
+      customer_name:          data.customer_name || 'Unknown',
+      churn_prediction:       result.churn_prediction,
+      churn_probability:      result.churn_probability,
+      risk_category:          result.risk_category,
+      churn_reasons:          result.churn_reasons || [],
+      recommended_strategies: result.recommended_strategies || [],
     });
 
-    res.json(record);
+    res.json({ ...record.toObject(), recommended_strategies: result.recommended_strategies });
 
   } catch (err) {
     res.status(500).json({ error: err.message });

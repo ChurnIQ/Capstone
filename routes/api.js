@@ -249,4 +249,72 @@ router.get('/me', (req, res) => {
   res.json({ name: req.user.name, email: req.user.email, avatar: req.user.avatar || null });
 });
 
+
+// ─────────────────────────────────────────────────────────────────────
+// BATCH CSV UPLOAD
+// ─────────────────────────────────────────────────────────────────────
+router.post('/upload', upload.single('dataset'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No CSV file uploaded' });
+
+  const rows = [];
+  const filePath = req.file.path;
+
+  try {
+    await new Promise((resolve, reject) => {
+      fs.createReadStream(filePath)
+        .pipe(csv())
+        .on('data', row => rows.push(row))
+        .on('end', resolve)
+        .on('error', reject);
+    });
+
+    const CHUNK_SIZE = 1000;
+    const saved = [];
+
+    for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
+      const chunk = rows.slice(i, i + CHUNK_SIZE);
+
+      for (const row of chunk) {
+        try {
+          const result = await runPrediction(row);
+          const record = await Prediction.create({
+            customer_id:            row.customer_id || `BATCH-${i}`,
+            customer_name:          row.customer_name || 'Unknown',
+            churn_prediction:       result.churn_prediction,
+            churn_probability:      result.churn_probability,
+            risk_category:          result.risk_category,
+            churn_reasons:          result.churn_reasons || [],
+            recommended_strategies: result.recommended_strategies || [],
+          });
+          saved.push(record);
+        } catch (e) { /* skip invalid rows */ }
+      }
+    }
+
+    fs.unlink(filePath, () => {});
+    res.json({ saved: saved.length, total: rows.length });
+
+  } catch (err) {
+    fs.unlink(filePath, () => {});
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// ─────────────────────────────────────────────────────────────────────
+// BATCH STATS
+// ─────────────────────────────────────────────────────────────────────
+router.get('/batch-stats', async (req, res) => {
+  try {
+    const total  = await Prediction.countDocuments();
+    const high   = await Prediction.countDocuments({ risk_category: 'High' });
+    const churn  = await Prediction.countDocuments({ churn_prediction: 1 });
+    const avgChurnRate = total ? ((churn / total) * 100).toFixed(1) : 0;
+    res.json({ totalProcessed: total, highRiskCount: high, avgChurnRate });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 module.exports = router;

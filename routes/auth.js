@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const path = require('path');
 const passport = require('passport');
 const User = require('../models/User');
 
@@ -27,7 +28,7 @@ router.get('/signup', ensureGuest, (req, res) => {
 
 router.get('/dashboard', ensureAuth, (req, res) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
-  res.render('dashboard', { user: req.user });
+  res.sendFile(path.join(__dirname, '..', 'client', 'dist', 'index.html'));
 });
 
 // ──── Local Auth ────

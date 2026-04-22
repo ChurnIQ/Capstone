@@ -1,0 +1,48 @@
+version: "3.9"
+
+services:
+  mongo:
+    image: mongo:7
+    restart: always
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      - "27017:27017"
+
+  server:
+    build:
+      context: .
+    container_name: capstone-server
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    # ✅ THIS FIXES YOUR MAIN ISSUE (.env not loading)
+    env_file:
+      - .env
+
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+
+      MONGODB_URI: ${MONGODB_URI}
+      SESSION_SECRET: ${SESSION_SECRET}
+
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL}
+
+      ML_API_URL: http://localhost:5000
+      MODEL_PATH: /usr/src/app/ml/model.pkl
+      SCALER_PATH: /usr/src/app/ml/scaler.pkl
+
+    ports:
+      - "3000:3000"
+      - "5000:5000"
+
+    restart: always
+    depends_on:
+      - mongo
+
+volumes:
+  mongo-data:

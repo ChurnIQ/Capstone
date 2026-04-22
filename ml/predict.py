@@ -137,3 +137,31 @@ class PredictionEngine:
             "recommended_strategies": strategies,
             "customer_id": data.get("customer_id")
         }
+
+    def predict_batch(self, records: list) -> list:
+        results = []
+        for record in records:
+            try:
+                results.append(self.predict(record))
+            except Exception as exc:
+                results.append({
+                    'customer_id': record.get('customer_id'),
+                    'error': str(exc),
+                })
+        return results
+
+    def feature_importance(self) -> list:
+        if not hasattr(self.model, 'feature_importances_'):
+            return []
+        pairs = zip(FEATURES, self.model.feature_importances_)
+        return [
+            {'feature': f, 'importance': round(float(i), 4)}
+            for f, i in sorted(pairs, key=lambda x: -x[1])
+        ]
+
+    def model_info(self) -> dict:
+        return {
+            'model_name': type(self.model).__name__,
+            'features':   FEATURES,
+            'has_scaler': self.scaler is not None,
+        }

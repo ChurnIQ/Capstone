@@ -71,23 +71,20 @@ def predict_batch():
     try:
         results = engine.predict_batch(data)
 
-        # ✅ FIXED: Flat structure for batch as well
-        records = [
-            {
-                "customer_id": d.get("customer_id"),
-                "customer_name": d.get("customer_name", "Unknown"),
-
-                "churn_prediction": r["churn_prediction"],
-                "churn_probability": r["churn_probability"],
-                "risk_category": r["risk_category"],
-
-                "churn_reasons": r["churn_reasons"],
-                "recommended_strategy": ", ".join(r["recommended_strategies"]),
-
-                "createdAt": datetime.utcnow()
-            }
-            for d, r in zip(data, results)
-        ]
+        records = []
+        for d, r in zip(data, results):
+            if 'error' in r:
+                continue
+            records.append({
+                "customer_id":          d.get("customer_id"),
+                "customer_name":        d.get("customer_name", "Unknown"),
+                "churn_prediction":     r["churn_prediction"],
+                "churn_probability":    r["churn_probability"],
+                "risk_category":        r["risk_category"],
+                "churn_reasons":        r.get("churn_reasons", []),
+                "recommended_strategies": r.get("recommended_strategies", []),
+                "createdAt":            datetime.utcnow()
+            })
 
         if records:
             predictions_collection.insert_many(records)

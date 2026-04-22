@@ -2,6 +2,7 @@ import os
 import joblib
 import numpy as np
 import pandas as pd
+from retention_strategies import get_retention_strategy, risk_category
 
 
 FEATURES = [
@@ -17,12 +18,6 @@ FEATURES = [
     'maximum_days_inactive',
     'customer_support_calls',
 ]
-
-STRATEGIES = {
-    'High':   'Personal retention call + exclusive loyalty discount within 24h',
-    'Medium': 'Targeted email campaign + feature highlight nudge',
-    'Low':    'Routine check-in + monthly newsletter engagement',
-}
 
 
 class PredictionEngine:
@@ -65,21 +60,13 @@ class PredictionEngine:
             X = pd.DataFrame(self.scaler.transform(X), columns=FEATURES)
         return X
 
-    @staticmethod
-    def _risk_category(probability: float) -> str:
-        if probability >= 0.70:
-            return 'High'
-        if probability >= 0.40:
-            return 'Medium'
-        return 'Low'
-
     def _build_response(self, probability: float, customer_id: str = None) -> dict:
-        risk = self._risk_category(probability)
+        strategy = get_retention_strategy(probability)
         result = {
             'churn_prediction':     int(probability >= 0.5),
             'churn_probability':    round(float(probability), 4),
-            'risk_category':        risk,
-            'recommended_strategy': STRATEGIES[risk],
+            'risk_category':        strategy['risk_category'],
+            'recommended_strategy': strategy['recommended_strategy'],
         }
         if customer_id is not None:
             result['customer_id'] = customer_id

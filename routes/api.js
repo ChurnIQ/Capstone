@@ -105,6 +105,12 @@ router.get('/stats', async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────
 // PREDICTIONS TABLE
 // ─────────────────────────────────────────────────────────────────────
+const FALLBACK_STRATEGIES = {
+  High:   ['Personal retention call + exclusive loyalty discount within 24h'],
+  Medium: ['Targeted email campaign + feature highlight nudge'],
+  Low:    ['Routine check-in + monthly newsletter engagement'],
+};
+
 router.get('/predictions', async (req, res) => {
   try {
     const data = await Prediction.find()
@@ -112,8 +118,16 @@ router.get('/predictions', async (req, res) => {
       .limit(10)
       .lean();
 
+    // Backfill recommended_strategies for older records that lack it
+    const predictions = data.map(p => {
+      if (!p.recommended_strategies || p.recommended_strategies.length === 0) {
+        p.recommended_strategies = FALLBACK_STRATEGIES[p.risk_category] || FALLBACK_STRATEGIES.Low;
+      }
+      return p;
+    });
+
     res.json({
-      predictions: data,
+      predictions,
       pagination: { totalPages: 1 }
     });
 

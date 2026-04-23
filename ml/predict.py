@@ -120,3 +120,4 @@ class PredictionEngine:
             'has_scaler': self.scaler is not None,
         }
 # Load trained model and preprocessing objects
+# Apply preprocessing before generating predictions

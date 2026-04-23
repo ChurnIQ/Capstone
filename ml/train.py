@@ -103,3 +103,4 @@ if __name__ == '__main__':
 # Split dataset into training and testing sets
 # Train Random Forest classifier on processed data
 # Save trained model and scaler for future predictions
+# Refactor: cleaned code structure for better readability

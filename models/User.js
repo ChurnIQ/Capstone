@@ -45,3 +45,4 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
 
 module.exports = mongoose.model('User', userSchema);
 // Define schema for storing churn-related user data
+// Store prediction results in database

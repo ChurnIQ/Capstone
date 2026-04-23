@@ -267,9 +267,8 @@ router.get('/analytics/churn-trend', async (req, res) => {
 // MODELS
 // ─────────────────────────────────────────────────────────────────────
 router.get('/models/comparison', async (req, res) => {
-  // Try to get real model info from Flask; fall back gracefully
+  // Try to get live model name from Flask; fall back to 'Random Forest'
   let modelName = 'Random Forest';
-  let featureCount = 11;
   try {
     const info = await new Promise((resolve, reject) => {
       const url = new URL('/model-info', ML_API_URL);
@@ -279,13 +278,16 @@ router.get('/models/comparison', async (req, res) => {
       r.on('error', reject); r.end();
     });
     if (info.model_name) modelName = info.model_name.replace(/([A-Z])/g, ' $1').trim();
-    if (info.features)   featureCount = info.features.length;
   } catch (_) {}
 
+  // Metrics from training.ipynb (weighted avg, test set of 400 rows, random_state=42)
   res.json([
-    { model: modelName + ' (pkl)',  accuracy: 91, precision: 90, recall: 89, f1: 89, selected: true,  features: featureCount },
-    { model: 'XGBoost (baseline)', accuracy: 89, precision: 88, recall: 87, f1: 87, selected: false, features: featureCount },
-    { model: 'Logistic Regression',accuracy: 84, precision: 83, recall: 82, f1: 82, selected: false, features: featureCount },
+    { model: modelName,           accuracy: 91.0, precision: 91.0, recall: 91.0, f1: 91.0, selected: true  },
+    { model: 'Gradient Boosting', accuracy: 89.8, precision: 89.0, recall: 90.0, f1: 89.0, selected: false },
+    { model: 'XGBoost',           accuracy: 89.5, precision: 89.0, recall: 90.0, f1: 89.0, selected: false },
+    { model: 'KNN',               accuracy: 88.0, precision: 85.0, recall: 88.0, f1: 86.0, selected: false },
+    { model: 'Decision Tree',     accuracy: 87.8, precision: 87.0, recall: 88.0, f1: 87.0, selected: false },
+    { model: 'Logistic Reg.',     accuracy: 87.0, precision: 83.0, recall: 87.0, f1: 84.0, selected: false },
   ]);
 });
 

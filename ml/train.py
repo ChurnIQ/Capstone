@@ -99,3 +99,4 @@ if __name__ == '__main__':
 # Step 1: Initialize churn model training pipeline
 # Handle missing values using basic imputation
 # Encode categorical features like gender and subscription type
+# Normalize numerical features for better model performance

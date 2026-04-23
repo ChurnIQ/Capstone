@@ -272,5 +272,9 @@ ISC
 
 
 ## Churn Prediction Pipeline Overview
+## Churn Prediction Pipeline
+
+This project predicts customer churn using a machine learning model
+and provides retention strategies based on risk classification.
 
 

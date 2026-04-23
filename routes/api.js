@@ -571,3 +571,4 @@ router.get('/models/comparison', async (req, res) => {
 });
 
 module.exports = router;
+// Endpoint to handle churn prediction requests

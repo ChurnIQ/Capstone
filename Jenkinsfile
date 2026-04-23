@@ -2,8 +2,9 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME     = 'churniq'
-        CONTAINER_NAME = 'churniq-app'
+        BACKEND_IMAGE  = 'churniq-backend'
+        ML_IMAGE       = 'churniq-ml'
+        FRONTEND_IMAGE = 'churniq-frontend'
     }
 
     stages {
@@ -23,7 +24,6 @@ pipeline {
         stage('Test') {
             steps {
                 sh '''
-                    # Try to start Flask ML API if Python venv is available
                     if [ -f ml/app.py ]; then
                         python3 -m venv /tmp/ci-mlenv 2>/dev/null || true
                         /tmp/ci-mlenv/bin/pip install -q -r ml/requirements.txt 2>/dev/null || true
@@ -44,10 +44,23 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
-            steps {
-                sh 'docker build --network=host -t ${IMAGE_NAME}:${BUILD_NUMBER} .'
-                sh 'docker tag ${IMAGE_NAME}:${BUILD_NUMBER} ${IMAGE_NAME}:latest'
+        stage('Build Docker Images') {
+            parallel {
+                stage('Backend') {
+                    steps {
+                        sh 'docker build --network=host -t ${BACKEND_IMAGE}:${BUILD_NUMBER} -t ${BACKEND_IMAGE}:latest .'
+                    }
+                }
+                stage('ML Service') {
+                    steps {
+                        sh 'docker build --network=host -t ${ML_IMAGE}:${BUILD_NUMBER} -t ${ML_IMAGE}:latest ./ml'
+                    }
+                }
+                stage('Frontend') {
+                    steps {
+                        sh 'docker build --network=host -t ${FRONTEND_IMAGE}:${BUILD_NUMBER} -t ${FRONTEND_IMAGE}:latest ./client'
+                    }
+                }
             }
         }
 
@@ -59,8 +72,8 @@ pipeline {
                         cp /home/pancham/Downloads/loginpage/.env .env
                     fi
 
-                    # Stop any containers holding port 3000 or 5000 (from any compose project)
-                    docker ps --format "{{.ID}} {{.Ports}}" | grep -E "0.0.0.0:(3000|5000)" | awk "{print \$1}" | xargs -r docker stop || true
+                    # Release ports 80, 3000, 5000 held by any existing containers
+                    docker ps --format "{{.ID}} {{.Ports}}" | grep -E "0.0.0.0:(80|3000|5000)" | awk "{print \$1}" | xargs -r docker stop || true
 
                     docker compose down --remove-orphans || true
                     docker compose up -d
@@ -71,7 +84,7 @@ pipeline {
 
     post {
         success {
-            sh 'echo "Pipeline succeeded. ChurnIQ is live at http://$(hostname -I | awk \'{print $1}\'):3000"'
+            sh 'echo "Pipeline succeeded. ChurnIQ is live at http://$(hostname -I | awk \'{print $1}\'):80"'
         }
         failure {
             echo 'Pipeline failed. Check logs above.'

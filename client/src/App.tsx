@@ -26,7 +26,9 @@ export default function App() {
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
 
   useEffect(() => {
-    apiFetch<User>('/api/me').then(setUser).catch(() => {})
+    apiFetch<User>('/api/me').then(setUser).catch(() => {
+      window.location.href = '/login'
+    })
   }, [])
 
   function showToast(msg: string, type: 'success' | 'error' = 'success') {

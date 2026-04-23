@@ -36,7 +36,7 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.static(path.join(__dirname, 'client', 'dist')));
+// Note: client/dist is served by the frontend nginx container in Docker.
 
 // ── Session ───────────────────────────────────────────────────────────────────
 app.use(session({

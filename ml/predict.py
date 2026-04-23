@@ -123,3 +123,4 @@ class PredictionEngine:
 # Apply preprocessing before generating predictions
 # Generate churn probability score
 # Classify users into high/low churn risk categories
+# Optimize batch predictions using chunk processing

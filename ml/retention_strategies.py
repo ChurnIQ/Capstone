@@ -20,3 +20,4 @@ def get_retention_strategy(probability: float) -> dict:
         'risk_category': risk,
         'recommended_strategy': STRATEGIES[risk]
     }
+# Map churn risk to actionable retention strategies

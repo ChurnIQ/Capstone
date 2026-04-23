@@ -54,6 +54,14 @@ pipeline {
         stage('Deploy') {
             steps {
                 sh '''
+                    # Copy .env from project directory if not present in workspace
+                    if [ ! -f .env ] && [ -f /home/pancham/Downloads/loginpage/.env ]; then
+                        cp /home/pancham/Downloads/loginpage/.env .env
+                    fi
+
+                    # Stop any containers holding port 3000 or 5000 (from any compose project)
+                    docker ps --format "{{.ID}} {{.Ports}}" | grep -E "0.0.0.0:(3000|5000)" | awk "{print \$1}" | xargs -r docker stop || true
+
                     docker compose down --remove-orphans || true
                     docker compose up -d
                 '''

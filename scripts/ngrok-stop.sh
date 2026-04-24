@@ -9,8 +9,10 @@ echo "Stopping ngrok..."
 docker compose --profile ngrok stop ngrok
 
 # Restore localhost callback URL
-if grep -q "^GOOGLE_CALLBACK_URL=" .env; then
-  sed -i "s|^GOOGLE_CALLBACK_URL=.*|GOOGLE_CALLBACK_URL=http://localhost:3000/auth/google/callback|" .env
+if [ ! -f .env ]; then
+  echo "Warning: .env file not found. Skipping GOOGLE_CALLBACK_URL restore."
+elif grep -q "^GOOGLE_CALLBACK_URL=" .env; then
+  sed -i "s|^GOOGLE_CALLBACK_URL=.*|GOOGLE_CALLBACK_URL=https://localhost:3000/auth/google/callback|" .env
 fi
 
 # Restart backend with restored URL
@@ -18,5 +20,5 @@ echo "Restarting backend with localhost callback URL..."
 docker compose up -d --no-deps backend
 
 echo ""
-echo "ngrok stopped. GOOGLE_CALLBACK_URL restored to http://localhost:3000/auth/google/callback"
+echo "ngrok stopped. GOOGLE_CALLBACK_URL restored to https://localhost:3000/auth/google/callback"
 echo ""

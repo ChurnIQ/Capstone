@@ -18,7 +18,8 @@ require('./config/passport');
 
 // ── Environment validation ────────────────────────────────────────────────────
 if (!process.env.SESSION_SECRET) {
-  console.warn('⚠️  WARNING: SESSION_SECRET is not set. Using fallback secret — unsafe in production.');
+  console.error('SESSION_SECRET is not set. Refusing to start without a session secret.');
+  process.exit(1);
 }
 
 // ── Ensure tmp upload dir exists ──────────────────────────────────────────────
@@ -27,6 +28,9 @@ if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
+
+// Trust nginx proxy (required for secure cookies behind nginx)
+app.set('trust proxy', 1);
 
 // ── View engine ───────────────────────────────────────────────────────────────
 app.set('view engine', 'ejs');
@@ -40,14 +44,14 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // ── Session ───────────────────────────────────────────────────────────────────
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'fallback-secret',
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   store: MongoStore.create({
     mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/loginpage',
     collectionName: 'sessions',
   }),
-  cookie: { maxAge: 1000 * 60 * 60 * 24 }, // 1 day
+  cookie: { maxAge: 1000 * 60 * 60 * 24, secure: process.env.NODE_ENV === 'production' }, // 1 day
 }));
 
 // ── Passport ──────────────────────────────────────────────────────────────────

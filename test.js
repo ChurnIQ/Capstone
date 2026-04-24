@@ -2,15 +2,27 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert');
 const http   = require('http');
+const https  = require('https');
 
-// ── Helper: HTTP GET ──────────────────────────────────────────────────────────
+// ── Helper: GET (auto-selects http/https, accepts self-signed certs) ──────────
 function get(url) {
+  const lib    = url.startsWith('https') ? https : http;
+  const parsed = new URL(url);
   return new Promise((resolve, reject) => {
-    http.get(url, (res) => {
+    const opts = {
+      hostname: parsed.hostname,
+      port:     parseInt(parsed.port) || (url.startsWith('https') ? 443 : 80),
+      path:     parsed.pathname,
+      method:   'GET',
+      rejectUnauthorized: false,
+    };
+    const req = lib.request(opts, (res) => {
       let body = '';
       res.on('data', (chunk) => { body += chunk; });
       res.on('end', () => resolve({ status: res.statusCode, body }));
-    }).on('error', reject);
+    });
+    req.on('error', reject);
+    req.end();
   });
 }
 
@@ -77,36 +89,55 @@ describe('Unit — module loading', () => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 2. HTTP — Node.js app (port 3000)
+// Skips gracefully if stack is not running (e.g. in CI before Docker deploy)
 // ─────────────────────────────────────────────────────────────────────────────
-describe('HTTP — Node.js app (:3000)', () => {
-  it('GET / redirects to /login (3xx)', async () => {
-    const res = await get('http://localhost:3000/');
-    assert.ok([301, 302, 308].includes(res.status), `Expected redirect, got ${res.status}`);
+async function backendRunning() {
+  return new Promise((resolve) => {
+    const req = https.request(
+      { hostname: 'localhost', port: 3000, path: '/login', method: 'GET', rejectUnauthorized: false },
+      () => resolve(true)
+    );
+    req.on('error', () => resolve(false));
+    req.setTimeout(2000, () => { req.destroy(); resolve(false); });
+    req.end();
+  });
+}
+
+describe('HTTP — Node.js app (:3000)', async () => {
+  const skipBackend = !(await backendRunning());
+  if (skipBackend) {
+    it('Backend HTTP tests', { skip: 'Stack not running — skipped in CI (runs inside Docker)' }, () => {});
+    return;
+  }
+
+  it('GET / returns 200 (SPA index.html served by nginx)', async () => {
+    const res = await get('https://localhost:3000/');
+    assert.strictEqual(res.status, 200);
   });
 
   it('GET /login returns 200', async () => {
-    const res = await get('http://localhost:3000/login');
+    const res = await get('https://localhost:3000/login');
     assert.strictEqual(res.status, 200);
   });
 
   it('GET /signup returns 200', async () => {
-    const res = await get('http://localhost:3000/signup');
+    const res = await get('https://localhost:3000/signup');
     assert.strictEqual(res.status, 200);
   });
 
-  it('GET /dashboard redirects unauthenticated users to /login', async () => {
-    const res = await get('http://localhost:3000/dashboard');
-    assert.ok([301, 302, 308].includes(res.status), `Expected redirect, got ${res.status}`);
+  it('GET /dashboard returns 200 (SPA catch-all; auth guard is client-side)', async () => {
+    const res = await get('https://localhost:3000/dashboard');
+    assert.strictEqual(res.status, 200);
   });
 
   it('GET /api/stats returns 401 without auth', async () => {
-    const res = await get('http://localhost:3000/api/stats');
+    const res = await get('https://localhost:3000/api/stats');
     assert.strictEqual(res.status, 401);
   });
 
-  it('GET /nonexistent returns 404', async () => {
-    const res = await get('http://localhost:3000/nonexistent-route-xyz');
-    assert.ok([404, 302].includes(res.status), `Expected 404, got ${res.status}`);
+  it('GET /nonexistent returns 200 (SPA catch-all serves index.html)', async () => {
+    const res = await get('https://localhost:3000/nonexistent-route-xyz');
+    assert.strictEqual(res.status, 200);
   });
 });
 

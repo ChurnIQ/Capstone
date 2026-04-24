@@ -2,9 +2,13 @@ pipeline {
     agent any
 
     environment {
-        BACKEND_IMAGE  = 'churniq-backend'
-        ML_IMAGE       = 'churniq-ml'
-        FRONTEND_IMAGE = 'churniq-frontend'
+        BACKEND_IMAGE          = 'churniq-backend'
+        ML_IMAGE               = 'churniq-ml'
+        FRONTEND_IMAGE         = 'churniq-frontend'
+        JIRA_SITE              = "${env.JIRA_SITE ?: 'https://churniq.atlassian.net'}"
+        JIRA_ISSUE_KEY         = "${env.JIRA_ISSUE_KEY ?: 'CHURN-1'}"
+        JIRA_DONE_TRANSITION   = "${env.JIRA_DONE_TRANSITION ?: '31'}"
+        JIRA_REOPEN_TRANSITION = "${env.JIRA_REOPEN_TRANSITION ?: '21'}"
     }
 
     stages {
@@ -99,10 +103,24 @@ pipeline {
 
     post {
         success {
-            sh 'echo "Pipeline succeeded. ChurnIQ is live at http://$(hostname -I | awk \'{print $1}\'):3000"'
+            sh 'echo "Pipeline succeeded. ChurnIQ is live at https://$(hostname -I | awk \'{print $1}\'):3000"'
+            sh '''
+                curl -s -X POST \
+                    -u "$JIRA_USER:$JIRA_API_TOKEN" \
+                    -H "Content-Type: application/json" \
+                    --data "{\\"transition\\":{\\"id\\":\\"${JIRA_DONE_TRANSITION}\\"}}" \
+                    "${JIRA_SITE}/rest/api/2/issue/${JIRA_ISSUE_KEY}/transitions" || true
+            '''
         }
         failure {
-            echo 'Pipeline failed. Check logs above.'
+            sh 'echo "Pipeline failed. Check logs above."'
+            sh '''
+                curl -s -X POST \
+                    -u "$JIRA_USER:$JIRA_API_TOKEN" \
+                    -H "Content-Type: application/json" \
+                    --data "{\\"transition\\":{\\"id\\":\\"${JIRA_REOPEN_TRANSITION}\\"}}" \
+                    "${JIRA_SITE}/rest/api/2/issue/${JIRA_ISSUE_KEY}/transitions" || true
+            '''
         }
         always {
             sh 'docker image prune -f || true'

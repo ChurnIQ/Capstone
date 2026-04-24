@@ -5,9 +5,14 @@ set -e
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-# Load .env
+# Load .env (strip CRLF to handle Windows-edited files)
 if [ -f .env ]; then
-  set -a; source .env; set +a
+  while IFS= read -r line || [ -n "$line" ]; do
+    line="${line%$'\r'}"
+    [[ "$line" =~ ^[[:space:]]*# ]] && continue
+    [[ -z "$line" ]] && continue
+    export "$line"
+  done < .env
 fi
 
 if [ -z "$NGROK_AUTHTOKEN" ]; then

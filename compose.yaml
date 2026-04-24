@@ -68,5 +68,20 @@ services:
     depends_on:
       - backend
 
+  # ── ngrok tunnel (optional) ───────────────────────────────────────────────
+  # Start with: npm run ngrok:start
+  # Stop  with: npm run ngrok:stop
+  ngrok:
+    image: ngrok/ngrok:latest
+    profiles: ["ngrok"]
+    restart: unless-stopped
+    command: http frontend:80
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
+    ports:
+      - "4040:4040"
+    depends_on:
+      - frontend
+
 volumes:
   mongo-data:

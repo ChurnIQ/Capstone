@@ -11,7 +11,9 @@
     "docker:up": "docker compose up -d --build",
     "docker:down": "docker compose down",
     "build:client": "cd client && npm install && npm run build",
-    "start:full": "npm run build:client && node app.js"
+    "start:full": "npm run build:client && node app.js",
+    "ngrok:start": "bash scripts/ngrok-start.sh",
+    "ngrok:stop": "bash scripts/ngrok-stop.sh"
   },
   "keywords": [],
   "author": "",

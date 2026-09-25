@@ -29,7 +29,8 @@ const http       = require('http');
 const Customer   = require('../models/Customer');
 const Prediction = require('../models/Prediction');
 
-const ML_API_URL = process.env.ML_API_URL || 'http://localhost:5000';
+const ML_API_URL = process.env.ML_API_URL || (process.env.ML_API_HOSTPORT
+  ? `http://${process.env.ML_API_HOSTPORT}` : 'http://localhost:5000');
 
 
 // ── Auth guard ────────────────────────────────────────────────────────────────

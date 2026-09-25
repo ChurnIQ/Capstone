@@ -1,0 +1,34 @@
+# Import this blueprint from the project repository on Render.
+# Review the service pricing before creating resources.
+services:
+  - type: web
+    name: churniq-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: MONGODB_URI
+        sync: false
+      - key: ML_API_HOSTPORT
+        fromService:
+          type: pserv
+          name: churniq-ml
+          property: hostport
+  - type: pserv
+    name: churniq-ml
+    runtime: docker
+    dockerContext: ./ml
+    dockerfilePath: ./ml/Dockerfile
+    envVars:
+      - key: PORT
+        value: "5000"
+      - key: MODEL_PATH
+        value: /app/model.pkl
+      - key: SCALER_PATH
+        value: /app/scaler.pkl

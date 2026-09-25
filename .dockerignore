@@ -33,3 +33,6 @@
 LICENSE
 README.md
 .env
+env1
+**/.npm-cache
+**/.venv

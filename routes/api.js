@@ -26,10 +26,13 @@ const csv        = require('csv-parser');
 const fs         = require('fs');
 const path       = require('path');
 const http       = require('http');
+const https      = require('https');
 const Customer   = require('../models/Customer');
 const Prediction = require('../models/Prediction');
 
-const ML_API_URL = process.env.ML_API_URL || (process.env.ML_API_HOSTPORT
+const ML_API_URL = process.env.ML_API_URL || (process.env.VERCEL
+  ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL}/internal-ml`
+  : process.env.ML_API_HOSTPORT
   ? `http://${process.env.ML_API_HOSTPORT}` : 'http://localhost:5000');
 
 
@@ -43,14 +46,14 @@ router.use(ensureAuth);
 
 // ── Multer – CSV uploads stored temporarily ───────────────────────────────────
 const upload = multer({
-  dest: 'uploads/tmp/',
+  dest: process.env.VERCEL ? path.join(require('os').tmpdir(), 'churniq') : 'uploads/tmp/',
   fileFilter: (req, file, cb) => {
     if (path.extname(file.originalname).toLowerCase() !== '.csv') {
       return cb(new Error('Only CSV files are allowed'), false);
     }
     cb(null, true);
   },
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB max
+  limits: { fileSize: (process.env.VERCEL ? 4 : 10) * 1024 * 1024 },
 });
 
 
@@ -63,16 +66,16 @@ async function runPrediction(features) {
   try {
     const body = JSON.stringify(features);
     const result = await new Promise((resolve, reject) => {
-      const url  = new URL('/predict', ML_API_URL);
+      const url  = new URL(ML_API_URL.replace(/\/$/, '') + '/predict');
       const opts = {
         hostname: url.hostname,
-        port:     url.port || 5000,
+        port:     url.port || (url.protocol === 'https:' ? 443 : 80),
         path:     url.pathname,
         method:   'POST',
-        headers:  { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
-        timeout:  5000,
+        headers:  { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body), 'X-ML-Secret': process.env.SESSION_SECRET || '' },
+        timeout:  30000,
       };
-      const req = http.request(opts, (res) => {
+      const req = (url.protocol === 'https:' ? https : http).request(opts, (res) => {
         let data = '';
         res.on('data', chunk => { data += chunk; });
         res.on('end', () => {
@@ -90,6 +93,7 @@ async function runPrediction(features) {
     return result;
 
   } catch (err) {
+    if (process.env.VERCEL) throw new Error('Prediction service unavailable. Please retry shortly.');
     console.warn(`[ML API unavailable — using fallback] ${err.message}`);
     return runFallbackPrediction(features);
   }
@@ -371,16 +375,11 @@ router.get('/models/comparison', async (req, res) => {
   // Try to get live model name from Flask; fall back to 'Random Forest'
   let modelName = 'Random Forest';
   try {
-    const info = await new Promise((resolve, reject) => {
-      const url = new URL('/model-info', ML_API_URL);
-      const r = http.request(
-        { hostname: url.hostname, port: url.port || 5000, path: url.pathname, method: 'GET', timeout: 3000 },
-        (resp) => { let d = ''; resp.on('data', c => { d += c; }); resp.on('end', () => resolve(JSON.parse(d))); }
-      );
-      r.on('error', reject);
-      r.on('timeout', () => { r.destroy(); reject(new Error('timeout')); });
-      r.end();
+    const response = await fetch(ML_API_URL.replace(/\/$/, '') + '/model-info', {
+      headers: { 'X-ML-Secret': process.env.SESSION_SECRET || '' },
+      signal: AbortSignal.timeout(10000),
     });
+    const info = await response.json();
     if (info.model_name) modelName = info.model_name.replace(/([A-Z])/g, ' $1').trim();
   } catch (_) {}
 
@@ -469,6 +468,7 @@ router.post('/upload', upload.single('dataset'), async (req, res) => {
     fs.unlink(filePath, () => {});
     res.json({
       message:      `Processed ${rows.length} rows`,
+      total:         rows.length,
       saved:         saved.length,
       errors:        errors.length,
       errorDetails:  errors.slice(0, 10),

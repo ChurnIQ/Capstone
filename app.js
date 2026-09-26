@@ -23,11 +23,20 @@ if (!process.env.SESSION_SECRET) {
 }
 
 // ── Ensure tmp upload dir exists ──────────────────────────────────────────────
-const tmpDir = path.join(__dirname, 'uploads', 'tmp');
+const tmpDir = process.env.VERCEL ? path.join(require('os').tmpdir(), 'churniq') : path.join(__dirname, 'uploads', 'tmp');
 if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
+let connection;
+function connectDatabase() {
+  if (!connection) connection = mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/loginpage', { serverSelectionTimeoutMS: 10000, maxPoolSize: 5 }).catch(err => { connection = null; throw err; });
+  return connection;
+}
+app.use(async (req, res, next) => {
+  try { await connectDatabase(); next(); }
+  catch (err) { console.error('Database unavailable:', err.name); res.status(503).json({ error: 'Database connection unavailable' }); }
+});
 
 // Trust nginx proxy (required for secure cookies behind nginx)
 app.set('trust proxy', 1);
@@ -100,7 +109,7 @@ app.use((err, req, res, next) => {
 });
 
 // ── Connect to MongoDB & start ────────────────────────────────────────────────
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/loginpage')
+if (!process.env.VERCEL) connectDatabase()
   .then(() => {
     console.log('✓ MongoDB connected');
     app.listen(PORT, () => {

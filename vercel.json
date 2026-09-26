@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "app.js", "use": "@vercel/node", "config": { "includeFiles": ["views/**"], "maxDuration": 60 } },
+    { "src": "api/ml.py", "use": "@vercel/python", "config": { "includeFiles": ["ml/**"], "excludeFiles": ["client/**", "node_modules/**", ".git/**"], "maxDuration": 60 } },
+    { "src": "client/package.json", "use": "@vercel/static-build", "config": { "distDir": "dist" } }
+  ],
+  "routes": [
+    { "src": "/internal-ml/(.*)", "dest": "/api/ml.py" },
+    { "src": "/assets/(.*)", "dest": "/assets/$1" },
+    { "src": "/dashboard", "dest": "/index.html" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/app.js" }
+  ]
+}

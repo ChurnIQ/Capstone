@@ -1,0 +1,7 @@
+.git
+env1
+.env
+**/node_modules
+**/.npm-cache
+**/__pycache__
+**/.venv

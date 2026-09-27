@@ -89,10 +89,18 @@ async function runPrediction(features) {
       req.end();
     });
 
-    if (result.error) throw new Error(result.error);
+    if (result.error) {
+      const error = new Error(result.error);
+      if (result.error === 'Invalid customer features') {
+        error.message = 'Please enter valid, non-negative numbers in customer fields. Optional fields may be left blank.';
+        error.status = 400;
+      }
+      throw error;
+    }
     return result;
 
   } catch (err) {
+    if (err.status === 400) throw err;
     if (process.env.VERCEL) throw new Error('Prediction service unavailable. Please retry shortly.');
     console.warn(`[ML API unavailable — using fallback] ${err.message}`);
     return runFallbackPrediction(features);
@@ -278,7 +286,7 @@ router.post('/predict', async (req, res) => {
 
   } catch (err) {
     console.error('POST /api/predict error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 

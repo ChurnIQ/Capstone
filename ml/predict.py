@@ -1,4 +1,5 @@
 import os
+import math
 import joblib
 import numpy as np
 import pandas as pd
@@ -48,6 +49,9 @@ class PredictionEngine:
 
     def _preprocess(self, data: dict):
         """Returns (scaled DataFrame, raw row dict) for inference and reason detection."""
+        # Empty form inputs and CSV cells use the same defaults as omitted fields.
+        data = {key: value for key, value in data.items()
+                if value is not None and not (isinstance(value, str) and not value.strip())}
         row = {
             'age':                    float(data.get('age', 30)),
             'no_of_days_subscribed':  float(data.get('no_of_days_subscribed', 180)),
@@ -61,6 +65,9 @@ class PredictionEngine:
             'maximum_days_inactive':  float(data.get('maximum_days_inactive', 0)),
             'customer_support_calls': float(data.get('customer_support_calls', 0)),
         }
+        for key, value in row.items():
+            if not math.isfinite(value) or value < 0:
+                raise ValueError(f'{key} must be a finite, non-negative number')
         X = pd.DataFrame([row], columns=FEATURES)
         if self.scaler:
             X = pd.DataFrame(self.scaler.transform(X), columns=FEATURES)

@@ -42,44 +42,58 @@ passport.use(new LocalStrategy(
 ));
 
 // ──── Google OAuth Strategy ────
-passport.use(new GoogleStrategy(
-  {
-    clientID:     process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL:  process.env.GOOGLE_CALLBACK_URL || '/auth/google/callback',
-  },
-  async (accessToken, refreshToken, profile, done) => {
-    try {
-      // Find existing user by googleId or email
-      let user = await User.findOne({ googleId: profile.id });
+// Google login is optional for local development. Register the strategy only
+// when both required credentials are present so local email/password auth can
+// still start without production OAuth secrets.
+const googleOAuthEnabled = Boolean(
+  process.env.GOOGLE_CLIENT_ID?.trim()
+  && process.env.GOOGLE_CLIENT_SECRET?.trim()
+);
 
-      if (!user) {
-        const email = profile.emails?.[0]?.value;
-        if (email) {
-          user = await User.findOne({ email });
+if (googleOAuthEnabled) {
+  passport.use(new GoogleStrategy(
+    {
+      clientID:     process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL:  process.env.GOOGLE_CALLBACK_URL || '/auth/google/callback',
+    },
+    async (accessToken, refreshToken, profile, done) => {
+      try {
+        // Find existing user by googleId or email
+        let user = await User.findOne({ googleId: profile.id });
+
+        if (!user) {
+          const email = profile.emails?.[0]?.value;
+          if (email) {
+            user = await User.findOne({ email });
+          }
+
+          if (user) {
+            // Link Google account to existing email/password account
+            user.googleId = profile.id;
+            user.avatar   = user.avatar || profile.photos?.[0]?.value || '';
+            await user.save();
+          } else {
+            // Create new user from Google profile
+            user = await User.create({
+              googleId: profile.id,
+              name:     profile.displayName,
+              email:    profile.emails?.[0]?.value,
+              avatar:   profile.photos?.[0]?.value || '',
+            });
+          }
         }
 
-        if (user) {
-          // Link Google account to existing email/password account
-          user.googleId = profile.id;
-          user.avatar   = user.avatar || profile.photos?.[0]?.value || '';
-          await user.save();
-        } else {
-          // Create new user from Google profile
-          user = await User.create({
-            googleId: profile.id,
-            name:     profile.displayName,
-            email:    profile.emails?.[0]?.value,
-            avatar:   profile.photos?.[0]?.value || '',
-          });
-        }
+        return done(null, user);
+      } catch (err) {
+        return done(err, null);
       }
-
-      return done(null, user);
-    } catch (err) {
-      return done(err, null);
     }
-  }
-));
+  ));
+} else {
+  console.warn('Google OAuth is disabled: GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are not configured.');
+}
+
+passport.googleOAuthEnabled = googleOAuthEnabled;
 
 module.exports = passport;

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const passport = require('passport');
+const passport = require('../config/passport');
 const User = require('../models/User');
 
 // ──── Middleware ────
@@ -70,17 +70,27 @@ router.post('/signup', ensureGuest, async (req, res) => {
 });
 
 // ──── Google Auth ────
-router.get('/auth/google',
-  passport.authenticate('google', { scope: ['profile', 'email'] })
-);
+if (passport.googleOAuthEnabled) {
+  router.get('/auth/google',
+    passport.authenticate('google', { scope: ['profile', 'email'] })
+  );
 
-router.get('/auth/google/callback',
-  passport.authenticate('google', {
-    successRedirect: '/dashboard',
-    failureRedirect: '/login',
-    failureFlash: true
-  })
-);
+  router.get('/auth/google/callback',
+    passport.authenticate('google', {
+      successRedirect: '/dashboard',
+      failureRedirect: '/login',
+      failureFlash: true
+    })
+  );
+} else {
+  const googleAuthUnavailable = (req, res) => {
+    req.flash('error', 'Google login is not configured. Please use email and password.');
+    res.redirect('/login');
+  };
+
+  router.get('/auth/google', googleAuthUnavailable);
+  router.get('/auth/google/callback', googleAuthUnavailable);
+}
 
 // ──── Logout ────
 router.get('/logout', (req, res, next) => {

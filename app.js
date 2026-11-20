@@ -27,6 +27,11 @@ if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/loginpage';
+
+// Share Mongoose's MongoClient with the session store. This avoids opening a
+// second Atlas connection that can fail independently during local startup.
+const mongoConnection = mongoose.connect(MONGODB_URI);
 
 // ── View engine ───────────────────────────────────────────────────────────────
 app.set('view engine', 'ejs');
@@ -38,14 +43,20 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── Session ───────────────────────────────────────────────────────────────────
+const sessionStore = MongoStore.create({
+  clientPromise: mongoConnection.then(() => mongoose.connection.getClient()),
+  collectionName: 'sessions',
+});
+
+// Observe connect-mongo's derived initialization promise so transient Atlas
+// failures are handled by the normal startup error path below.
+sessionStore.collectionP.catch(() => {});
+
 app.use(session({
   secret: process.env.SESSION_SECRET || 'fallback-secret',
   resave: false,
   saveUninitialized: false,
-  store: MongoStore.create({
-    mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/loginpage',
-    collectionName: 'sessions',
-  }),
+  store: sessionStore,
   cookie: { maxAge: 1000 * 60 * 60 * 24 }, // 1 day
 }));
 
@@ -72,13 +83,15 @@ app.get('/dashboard', ensureAuth, (req, res) => {
 });
 
 // ── Google OAuth ──────────────────────────────────────────────────────────────
-app.get('/auth/google',
-  passport.authenticate('google', { scope: ['profile', 'email'] })
-);
-app.get('/auth/google/callback',
-  passport.authenticate('google', { failureRedirect: '/login', failureFlash: true }),
-  (req, res) => res.redirect('/dashboard')
-);
+if (passport.googleOAuthEnabled) {
+  app.get('/auth/google',
+    passport.authenticate('google', { scope: ['profile', 'email'] })
+  );
+  app.get('/auth/google/callback',
+    passport.authenticate('google', { failureRedirect: '/login', failureFlash: true }),
+    (req, res) => res.redirect('/dashboard')
+  );
+}
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
@@ -99,7 +112,7 @@ app.use((err, req, res, next) => {
 });
 
 // ── Connect to MongoDB & start ────────────────────────────────────────────────
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/loginpage')
+mongoConnection
   .then(() => {
     console.log('✓ MongoDB connected');
     app.listen(PORT, () => {

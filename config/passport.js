@@ -47,9 +47,16 @@ passport.use(new LocalStrategy(
   }
 ));
 
-// ──── Google OAuth Strategy (ONLY IF ENV EXISTS) ────
-if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+// ──── Google OAuth Strategy ────
+// Google login is optional for local development. Register the strategy only
+// when both required credentials are present so local email/password auth can
+// still start without production OAuth secrets.
+const googleOAuthEnabled = Boolean(
+  process.env.GOOGLE_CLIENT_ID?.trim()
+  && process.env.GOOGLE_CLIENT_SECRET?.trim()
+);
 
+if (googleOAuthEnabled) {
   passport.use(new GoogleStrategy(
     {
       clientID:     process.env.GOOGLE_CLIENT_ID,
@@ -58,20 +65,22 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
+        // Find existing user by googleId or email
         let user = await User.findOne({ googleId: profile.id });
 
         if (!user) {
           const email = profile.emails?.[0]?.value;
-
           if (email) {
             user = await User.findOne({ email });
           }
 
           if (user) {
+            // Link Google account to existing email/password account
             user.googleId = profile.id;
             user.avatar   = user.avatar || profile.photos?.[0]?.value || '';
             await user.save();
           } else {
+            // Create new user from Google profile
             user = await User.create({
               googleId: profile.id,
               name:     profile.displayName,
@@ -82,15 +91,15 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
         }
 
         return done(null, user);
-
       } catch (err) {
         return done(err, null);
       }
     }
   ));
-
 } else {
-  console.log("⚠️ Google OAuth disabled (no client ID/secret provided)");
+  console.warn('Google OAuth is disabled: GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are not configured.');
 }
+
+passport.googleOAuthEnabled = googleOAuthEnabled;
 
 module.exports = passport;

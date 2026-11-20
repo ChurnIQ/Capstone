@@ -28,11 +28,13 @@ if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/loginpage';
 let connection;
 function connectDatabase() {
-  if (!connection) connection = mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/loginpage', { serverSelectionTimeoutMS: 10000, maxPoolSize: 5 }).catch(err => { connection = null; throw err; });
+  if (!connection) connection = mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 10000, maxPoolSize: 5 }).catch(err => { connection = null; throw err; });
   return connection;
 }
+const mongoConnection = connectDatabase();
 app.use(async (req, res, next) => {
   try { await connectDatabase(); next(); }
   catch (err) { console.error('Database unavailable:', err.name); res.status(503).json({ error: 'Database connection unavailable' }); }
@@ -52,14 +54,20 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/assets', express.static(path.join(__dirname, 'client', 'dist', 'assets')));
 
 // ── Session ───────────────────────────────────────────────────────────────────
+const sessionStore = MongoStore.create({
+  clientPromise: mongoConnection.then(() => mongoose.connection.getClient()),
+  collectionName: 'sessions',
+});
+
+// Observe connect-mongo's derived initialization promise so transient Atlas
+// failures are handled by the normal startup error path below.
+sessionStore.collectionP.catch(() => {});
+
 app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
-  store: MongoStore.create({
-    mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/loginpage',
-    collectionName: 'sessions',
-  }),
+  store: sessionStore,
   cookie: { maxAge: 1000 * 60 * 60 * 24, secure: process.env.COOKIE_SECURE !== 'false' && process.env.NODE_ENV === 'production', httpOnly: true, sameSite: 'lax' }, // 1 day
 }));
 
@@ -82,13 +90,15 @@ app.use('/api', apiRoutes);
 
 
 // ── Google OAuth ──────────────────────────────────────────────────────────────
-app.get('/auth/google',
-  passport.authenticate('google', { scope: ['profile', 'email'] })
-);
-app.get('/auth/google/callback',
-  passport.authenticate('google', { failureRedirect: '/login', failureFlash: true }),
-  (req, res) => res.redirect('/dashboard')
-);
+if (passport.googleOAuthEnabled) {
+  app.get('/auth/google',
+    passport.authenticate('google', { scope: ['profile', 'email'] })
+  );
+  app.get('/auth/google/callback',
+    passport.authenticate('google', { failureRedirect: '/login', failureFlash: true }),
+    (req, res) => res.redirect('/dashboard')
+  );
+}
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
@@ -109,7 +119,7 @@ app.use((err, req, res, next) => {
 });
 
 // ── Connect to MongoDB & start ────────────────────────────────────────────────
-if (!process.env.VERCEL) connectDatabase()
+if (!process.env.VERCEL) mongoConnection
   .then(() => {
     console.log('✓ MongoDB connected');
     app.listen(PORT, () => {

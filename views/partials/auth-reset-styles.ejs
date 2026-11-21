@@ -1,0 +1,63 @@
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 40px 36px;
+    width: 100%;
+    max-width: 440px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.15);
+  }
+  h1 { font-size: 28px; color: #333; text-align: center; margin-bottom: 8px; }
+  .sub { text-align: center; color: #777; margin-bottom: 28px; font-size: 14px; line-height: 1.5; }
+  .message { padding: 11px 14px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; text-align: center; line-height: 1.4; }
+  .error-msg { background: #ffe0e0; color: #a93226; }
+  .success-msg { background: #e4f7e8; color: #237a3b; }
+  .form-group { margin-bottom: 18px; }
+  label { display: block; font-size: 13px; font-weight: 600; color: #555; margin-bottom: 6px; }
+  input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1.5px solid #ddd;
+    border-radius: 10px;
+    font-size: 15px;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  input:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,.12); }
+  .otp-input { font-size: 26px; font-weight: 700; letter-spacing: 10px; text-align: center; font-variant-numeric: tabular-nums; }
+  .btn {
+    width: 100%;
+    padding: 13px;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform .15s, box-shadow .15s, opacity .15s;
+  }
+  .btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,.15); }
+  .btn:disabled { opacity: .6; cursor: not-allowed; }
+  .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; }
+  .btn-secondary { background: #fff; color: #667eea; border: 1.5px solid #d9dcf7; margin-top: 12px; }
+  .bottom-link { text-align: center; margin-top: 22px; font-size: 14px; color: #888; }
+  .bottom-link a, .link-button { color: #667eea; text-decoration: none; font-weight: 600; }
+  .bottom-link a:hover, .link-button:hover { text-decoration: underline; }
+  .helper { color: #777; font-size: 12px; line-height: 1.5; margin-top: 7px; }
+  .rules { background: #f7f7fb; border-radius: 10px; padding: 12px 14px; margin: -4px 0 18px; color: #666; font-size: 12px; line-height: 1.6; }
+  @media (max-width: 480px) {
+    body { padding: 16px; align-items: flex-start; }
+    .card { margin-top: 7vh; padding: 30px 22px; }
+    h1 { font-size: 24px; }
+    .otp-input { letter-spacing: 7px; }
+  }
+</style>

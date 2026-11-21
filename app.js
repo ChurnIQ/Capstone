@@ -10,6 +10,7 @@ const flash    = require('express-flash');
 const passport = require('passport');
 
 const authRoutes = require('./routes/auth');
+const { createPasswordResetRouter } = require('./routes/passwordReset');
 require('./models/Customer');
 require('./models/Prediction');
 const apiRoutes  = require('./routes/api');   // ← ChurnIQ API routes
@@ -84,6 +85,7 @@ const ensureAuth = (req, res, next) => {
 
 // ── Auth routes (login, register, logout, Google OAuth) ───────────────────────
 app.use('/', authRoutes);
+app.use('/', createPasswordResetRouter());
 
 // ── ChurnIQ API routes (all protected inside routes/api.js) ───────────────────
 app.use('/api', apiRoutes);

@@ -76,9 +76,24 @@ describe('Unit — module loading', () => {
     assert.strictEqual(Prediction.modelName, 'Prediction');
   });
 
+  it('loads PasswordReset model', () => {
+    const PasswordReset = require('./models/PasswordReset');
+    assert.ok(PasswordReset);
+    assert.strictEqual(PasswordReset.modelName, 'PasswordReset');
+  });
+
   it('loads auth routes', () => {
     const auth = require('./routes/auth');
     assert.ok(auth);
+  });
+
+  it('keeps login, signup, and Google OAuth routes registered', () => {
+    const auth = require('./routes/auth');
+    const paths = auth.stack.filter((layer) => layer.route).map((layer) => layer.route.path);
+    assert.ok(paths.includes('/login'));
+    assert.ok(paths.includes('/signup'));
+    assert.ok(paths.includes('/auth/google'));
+    assert.ok(paths.includes('/auth/google/callback'));
   });
 
   it('loads api routes', () => {

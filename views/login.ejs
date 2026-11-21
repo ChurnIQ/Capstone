@@ -43,6 +43,15 @@
       font-size: 14px;
       text-align: center;
     }
+    .success-msg {
+      background: #e4f7e8;
+      color: #237a3b;
+      padding: 10px 14px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      text-align: center;
+    }
     .form-group {
       margin-bottom: 18px;
     }
@@ -119,6 +128,16 @@
       font-weight: 600;
     }
     .bottom-link a:hover { text-decoration: underline; }
+    .password-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 6px;
+    }
+    .password-heading label { margin-bottom: 0; }
+    .forgot-link { color: #667eea; text-decoration: none; font-size: 12px; font-weight: 600; }
+    .forgot-link:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -129,6 +148,9 @@
     <% if (typeof error !== 'undefined' && error && error.length > 0) { %>
       <div class="error-msg"><%= error %></div>
     <% } %>
+    <% if (typeof success !== 'undefined' && success && success.length > 0) { %>
+      <div class="success-msg"><%= success %></div>
+    <% } %>
 
     <form action="/login" method="POST">
       <div class="form-group">
@@ -136,7 +158,10 @@
         <input type="email" name="email" placeholder="you@example.com" required />
       </div>
       <div class="form-group">
-        <label>Password</label>
+        <div class="password-heading">
+          <label>Password</label>
+          <a class="forgot-link" href="/forgot-password">Forgot Password?</a>
+        </div>
         <input type="password" name="password" placeholder="••••••••" required />
       </div>
       <button class="btn btn-primary" type="submit">Sign In</button>

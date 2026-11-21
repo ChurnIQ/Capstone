@@ -19,7 +19,10 @@ function ensureAuth(req, res, next) {
 router.get('/', (req, res) => res.redirect('/login'));
 
 router.get('/login', ensureGuest, (req, res) => {
-  res.render('login', { error: req.flash('error') });
+  res.render('login', {
+    error: req.flash('error'),
+    success: req.flash('success'),
+  });
 });
 
 router.get('/signup', ensureGuest, (req, res) => {

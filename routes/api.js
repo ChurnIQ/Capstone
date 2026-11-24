@@ -4,6 +4,8 @@
  * REST API endpoints that power the ChurnIQ dashboard.
  * All routes are prefixed with /api (mounted in app.js).
  * All responses are JSON.
+ * Auth: HTTP Basic (API clients) or login session (dashboard) – see middleware/basicAuth.js.
+ * Interactive docs: /api-docs (Swagger UI).
  *
  * Endpoints:
  *   GET  /api/stats                          – Overview KPI cards
@@ -37,11 +39,11 @@ const ML_API_URL = process.env.ML_API_URL || (process.env.VERCEL
 
 
 // ── Auth guard ────────────────────────────────────────────────────────────────
-const ensureAuth = (req, res, next) => {
-  if (req.isAuthenticated()) return next();
-  res.status(401).json({ error: 'Unauthorized' });
-};
-router.use(ensureAuth);
+// API clients (Postman / Swagger / curl) authenticate with HTTP Basic Auth
+// (credentials from BASIC_AUTH_USER / BASIC_AUTH_PASS). The React dashboard
+// keeps using its login + 2FA session. Missing/incorrect credentials → 401.
+const { apiAuth } = require('../middleware/basicAuth');
+router.use(apiAuth);
 
 
 // ── Multer – CSV uploads stored temporarily ───────────────────────────────────
@@ -407,6 +409,7 @@ router.get('/models/comparison', async (req, res) => {
 // GET /api/me
 // ─────────────────────────────────────────────────────────────────────────────
 router.get('/me', (req, res) => {
+  if (!req.user) return res.json({ name: req.basicAuthUser, email: null, avatar: null, auth: 'basic' });
   res.json({ name: req.user.name, email: req.user.email, avatar: req.user.avatar || null });
 });
 

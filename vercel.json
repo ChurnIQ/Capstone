@@ -1,7 +1,7 @@
 {
   "version": 2,
   "builds": [
-    { "src": "app.js", "use": "@vercel/node", "config": { "includeFiles": ["views/**"], "maxDuration": 60 } },
+    { "src": "app.js", "use": "@vercel/node", "config": { "includeFiles": ["views/**", "node_modules/swagger-ui-dist/**"], "maxDuration": 60 } },
     { "src": "api/ml.py", "use": "@vercel/python", "config": { "includeFiles": ["ml/**"], "excludeFiles": ["client/**", "node_modules/**", ".git/**"], "maxDuration": 60 } },
     { "src": "client/package.json", "use": "@vercel/static-build", "config": { "distDir": "dist" } }
   ],

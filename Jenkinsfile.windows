@@ -1,0 +1,74 @@
+
+pipeline {
+    agent any
+
+    options {
+        timestamps()
+    }
+
+    environment {
+        PYTHON = '"C:\\Users\\Suhani Saxena\\AppData\\Local\\Programs\\Python\\Python312\\python.exe"'
+        DOCKER = '"C:\\Users\\Suhani Saxena\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin\\docker.exe"'
+    }
+
+    stages {
+
+        stage('1. Checkout Code') {
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/ChurnIQ/Capstone.git'
+            }
+        }
+
+        stage('2. Install Dependencies') {
+            steps {
+                bat 'npm ci'
+            }
+        }
+
+        stage('3. Run Node.js Tests') {
+            steps {
+                bat 'npm test'
+            }
+        }
+
+        stage('4. Run Python Unit Tests') {
+            steps {
+                bat '%PYTHON% -m unittest test_retention -v'
+            }
+        }
+
+        stage('5. Build Docker Images') {
+            steps {
+                bat '%DOCKER% build -t churniq-backend:%BUILD_NUMBER% -t churniq-backend:latest .'
+                bat '%DOCKER% build -t churniq-ml:%BUILD_NUMBER% -t churniq-ml:latest ./ml'
+                bat '%DOCKER% build -t churniq-frontend:%BUILD_NUMBER% -t churniq-frontend:latest ./client'
+            }
+        }
+
+        stage('6. Verify Docker Images') {
+            steps {
+                bat '%DOCKER% image inspect churniq-backend:%BUILD_NUMBER%'
+                bat '%DOCKER% image inspect churniq-ml:%BUILD_NUMBER%'
+                bat '%DOCKER% image inspect churniq-frontend:%BUILD_NUMBER%'
+            }
+        }
+
+        stage('7. Deployment Readiness Check') {
+            steps {
+                echo 'All tests passed and all three Docker images were verified.'
+                echo 'The application is ready for deployment.'
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'ChurnIQ pipeline completed successfully!'
+        }
+
+        failure {
+            echo 'ChurnIQ pipeline failed. Check the stage logs for details.'
+        }
+    }
+}

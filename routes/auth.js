@@ -3,6 +3,8 @@ const router = express.Router();
 const path = require('path');
 const passport = require('../config/passport');
 const User = require('../models/User');
+const twoFactorRoutes = require('./twoFactor');
+const { completeLogin } = twoFactorRoutes;
 
 // ──── Middleware ────
 function ensureGuest(req, res, next) {
@@ -35,11 +37,16 @@ router.get('/dashboard', ensureAuth, (req, res) => {
 });
 
 // ──── Local Auth ────
-router.post('/login', ensureGuest, passport.authenticate('local', {
-  successRedirect: '/dashboard',
-  failureRedirect: '/login',
-  failureFlash: true
-}));
+router.post('/login', ensureGuest, (req, res, next) => {
+  passport.authenticate('local', (err, user, info) => {
+    if (err) return next(err);
+    if (!user) {
+      req.flash('error', (info && info.message) || 'Login failed.');
+      return res.redirect('/login');
+    }
+    completeLogin(req, res, next, user); // asks for a 2FA code if enabled
+  })(req, res, next);
+});
 
 router.post('/signup', ensureGuest, async (req, res) => {
   try {
@@ -80,13 +87,16 @@ if (passport.googleOAuthEnabled) {
     passport.authenticate('google', { scope: ['profile', 'email'] })
   );
 
-  router.get('/auth/google/callback',
-    passport.authenticate('google', {
-      successRedirect: '/dashboard',
-      failureRedirect: '/login',
-      failureFlash: true
-    })
-  );
+  router.get('/auth/google/callback', (req, res, next) => {
+    passport.authenticate('google', (err, user) => {
+      if (err) return next(err);
+      if (!user) {
+        req.flash('error', 'Google sign-in failed. Please try again.');
+        return res.redirect('/login');
+      }
+      completeLogin(req, res, next, user); // asks for a 2FA code if enabled
+    })(req, res, next);
+  });
 } else {
   const googleAuthUnavailable = (req, res) => {
     req.flash('error', 'Google login is not configured. Please use email and password.');
@@ -104,5 +114,7 @@ router.get('/logout', (req, res, next) => {
     res.redirect('/login');
   });
 });
+
+router.use('/', twoFactorRoutes);
 
 module.exports = router;

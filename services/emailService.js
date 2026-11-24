@@ -54,7 +54,31 @@ function createEmailService({ env = process.env, transporter } = {}) {
     });
   }
 
-  return { sendPasswordResetOtp };
+  async function sendTwoFactorCode({ to, otp, expiresMinutes = 5 }) {
+    const from = env.SMTP_FROM?.trim();
+    if (!from) {
+      const error = new Error('SMTP_FROM is not configured');
+      error.code = 'SMTP_NOT_CONFIGURED';
+      throw error;
+    }
+
+    await getTransporter().sendMail({
+      from,
+      to,
+      subject: "Here's your two-factor code",
+      text: `Here's your two-factor code: ${otp}. It expires in ${expiresMinutes} minutes. If you did not try to sign in, please change your password.`,
+      html: `
+        <div style="font-family:Segoe UI,Arial,sans-serif;max-width:520px;margin:auto;color:#333">
+          <h2 style="color:#667eea">Here's your two-factor code</h2>
+          <div style="font-size:32px;letter-spacing:8px;font-weight:700;padding:18px 22px;background:#f3f1ff;border-radius:12px;text-align:center">${otp}</div>
+          <p>This code expires in ${expiresMinutes} minutes and can be used only once.</p>
+          <p style="color:#777;font-size:13px">If you did not try to sign in, please change your password.</p>
+        </div>
+      `,
+    });
+  }
+
+  return { sendPasswordResetOtp, sendTwoFactorCode };
 }
 
 module.exports = {

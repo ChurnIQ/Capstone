@@ -7,7 +7,7 @@
     "start": "node app.js",
     "dev": "node --watch app.js",
     "seed": "node scripts/seed.js",
-    "test": "node --test test.js password-reset.test.js",
+    "test": "node --test test.js password-reset.test.js totp.test.js twoFactorEmail.test.js",
     "docker:up": "docker compose up -d --build",
     "docker:down": "docker compose down",
     "build:client": "cd client && npm install && npm run build",
@@ -33,6 +33,7 @@
     "nodemailer": "^7.0.13",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
-    "passport-local": "^1.0.0"
+    "passport-local": "^1.0.0",
+    "qrcode": "^1.5.4"
   }
 }

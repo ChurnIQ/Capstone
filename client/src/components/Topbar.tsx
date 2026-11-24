@@ -72,6 +72,17 @@ export default function Topbar({ title, sub, user }: Props) {
           </span>
         )}
 
+        {/* Security */}
+        <a
+          href="/account/security"
+          className="text-xs font-medium transition-colors"
+          style={{ color: 'var(--text-muted)' }}
+          onMouseEnter={e => (e.currentTarget.style.color = 'var(--color-primary)')}
+          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+        >
+          Security
+        </a>
+
         {/* Sign out */}
         <a
           href="/logout"

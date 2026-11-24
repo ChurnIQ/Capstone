@@ -1,5 +1,7 @@
 
 require('dotenv').config();
+// Optional: use specific DNS servers (some networks refuse the SRV lookups Atlas needs).
+if (process.env.DNS_SERVERS) require('dns').setServers(process.env.DNS_SERVERS.split(',').map(s => s.trim()).filter(Boolean));
 const fs      = require('fs');
 const path    = require('path');
 const express = require('express');

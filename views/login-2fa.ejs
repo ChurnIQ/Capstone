@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Two-Factor Verification | ChurnIQ</title>
+  <%- include('partials/auth-reset-styles') %>
+</head>
+<body>
+  <main class="card">
+    <h1>Two-Factor Check</h1>
+    <% if (method === 'email') { %>
+      <p class="sub">We emailed a 6-digit code to <strong><%= maskedEmail %></strong>. It expires in 5 minutes.</p>
+    <% } else { %>
+      <p class="sub">Enter the 6-digit code from your authenticator app, or one of your backup codes.</p>
+    <% } %>
+
+    <% if (error && error.length > 0) { %><div class="message error-msg"><%= error[0] %></div><% } %>
+    <% if (success && success.length > 0) { %><div class="message success-msg"><%= success[0] %></div><% } %>
+
+    <form action="/login/2fa" method="POST">
+      <div class="form-group">
+        <label for="code">Verification code</label>
+        <input class="otp-input" id="code" type="text" name="code" inputmode="<%= method === 'email' ? 'numeric' : 'text' %>" autocomplete="one-time-code" maxlength="12" placeholder="000000" required autofocus />
+        <p class="helper">Five incorrect attempts will end this sign-in.</p>
+      </div>
+      <button class="btn btn-primary" type="submit">Verify</button>
+    </form>
+
+    <% if (method === 'email') { %>
+      <form action="/login/2fa/resend" method="POST" style="margin-top:12px;">
+        <button class="btn btn-secondary" type="submit">Resend code</button>
+      </form>
+    <% } %>
+
+    <div class="bottom-link"><a href="/login">Back to login</a></div>
+  </main>
+</body>
+</html>

@@ -1,5 +1,7 @@
 
 require('dotenv').config();
+// Optional: use specific DNS servers (some networks refuse the SRV lookups Atlas needs).
+if (process.env.DNS_SERVERS) require('dns').setServers(process.env.DNS_SERVERS.split(',').map(s => s.trim()).filter(Boolean));
 const fs      = require('fs');
 const path    = require('path');
 const express = require('express');
@@ -14,6 +16,8 @@ const { createPasswordResetRouter } = require('./routes/passwordReset');
 require('./models/Customer');
 require('./models/Prediction');
 const apiRoutes  = require('./routes/api');   // ← ChurnIQ API routes
+const swaggerUi  = require('swagger-ui-express');
+const openapiSpec = require('./docs/openapi');
 
 require('./config/passport');
 
@@ -86,6 +90,13 @@ const ensureAuth = (req, res, next) => {
 // ── Auth routes (login, register, logout, Google OAuth) ───────────────────────
 app.use('/', authRoutes);
 app.use('/', createPasswordResetRouter());
+
+// ── Swagger UI (interactive API docs; calls are authorised with Basic Auth) ──
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openapiSpec, {
+  customSiteTitle: 'ChurnIQ API Docs',
+  swaggerOptions: { persistAuthorization: true },
+}));
+app.get('/api-docs.json', (req, res) => res.json(openapiSpec));
 
 // ── ChurnIQ API routes (all protected inside routes/api.js) ───────────────────
 app.use('/api', apiRoutes);

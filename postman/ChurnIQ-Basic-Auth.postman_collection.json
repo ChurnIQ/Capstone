@@ -1,0 +1,660 @@
+{
+  "info": {
+    "name": "ChurnIQ API Security – Basic Auth",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Basic Authentication tests for the existing ChurnIQ API. Import together with ChurnIQ-Local.postman_environment.json and run the collection (Runner)."
+  },
+  "auth": {
+    "type": "basic",
+    "basic": [
+      {
+        "key": "username",
+        "value": "{{basic_user}}",
+        "type": "string"
+      },
+      {
+        "key": "password",
+        "value": "{{basic_pass}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [],
+  "item": [
+    {
+      "name": "1. Basic Auth checks",
+      "item": [
+        {
+          "name": "Valid credentials → 200",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "me"
+              ]
+            },
+            "description": "Collection-level Basic Auth is used."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Authenticated as the API user\", function () { pm.expect(pm.response.json().name).to.eql(pm.environment.get(\"basic_user\")); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Incorrect password → 401",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{basic_user}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{wrong_pass}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 401\", function () { pm.response.to.have.status(401); });",
+                  "pm.test(\"Body says Unauthorized\", function () { pm.expect(pm.response.json().error).to.eql(\"Unauthorized\"); });",
+                  "pm.test(\"WWW-Authenticate challenge present\", function () { pm.expect(pm.response.headers.get(\"WWW-Authenticate\")).to.include(\"Basic\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Incorrect username → 401",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "intruder",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{basic_pass}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 401\", function () { pm.response.to.have.status(401); });",
+                  "pm.test(\"Body says Unauthorized\", function () { pm.expect(pm.response.json().error).to.eql(\"Unauthorized\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Missing credentials → 401",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 401\", function () { pm.response.to.have.status(401); });",
+                  "pm.test(\"Body says Unauthorized\", function () { pm.expect(pm.response.json().error).to.eql(\"Unauthorized\"); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Churn prediction (POST /api/predict)",
+      "item": [
+        {
+          "name": "Predict churn – valid credentials → 200",
+          "request": {
+            "method": "POST",
+            "auth": null,
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_id\": \"POSTMAN-{{$timestamp}}\",\n  \"customer_name\": \"Postman Demo Customer\",\n  \"age\": 35,\n  \"no_of_days_subscribed\": 120,\n  \"multi_screen\": \"No\",\n  \"mail_subscribed\": \"No\",\n  \"weekly_mins_watched\": 90,\n  \"minimum_daily_mins\": 5,\n  \"maximum_daily_mins\": 40,\n  \"weekly_max_night_mins\": 20,\n  \"videos_watched\": 12,\n  \"maximum_days_inactive\": 21,\n  \"customer_support_calls\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/predict",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "predict"
+              ]
+            },
+            "description": "Reuses the existing churn prediction endpoint (Flask Random Forest model)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "const r = pm.response.json();",
+                  "pm.test(\"Has churn_prediction 0 or 1\", function () { pm.expect([0,1]).to.include(r.churn_prediction); });",
+                  "pm.test(\"churn_probability between 0 and 1\", function () { pm.expect(r.churn_probability).to.be.within(0,1); });",
+                  "pm.test(\"risk_category is High/Medium/Low\", function () { pm.expect([\"High\",\"Medium\",\"Low\"]).to.include(r.risk_category); });",
+                  "if (r._id) { pm.environment.set(\"prediction_id\", r._id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Predict churn – missing credentials → 401",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_id\": \"POSTMAN-{{$timestamp}}\",\n  \"customer_name\": \"Postman Demo Customer\",\n  \"age\": 35,\n  \"no_of_days_subscribed\": 120,\n  \"multi_screen\": \"No\",\n  \"mail_subscribed\": \"No\",\n  \"weekly_mins_watched\": 90,\n  \"minimum_daily_mins\": 5,\n  \"maximum_daily_mins\": 40,\n  \"weekly_max_night_mins\": 20,\n  \"videos_watched\": 12,\n  \"maximum_days_inactive\": 21,\n  \"customer_support_calls\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/predict",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "predict"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 401\", function () { pm.response.to.have.status(401); });",
+                  "pm.test(\"Body says Unauthorized\", function () { pm.expect(pm.response.json().error).to.eql(\"Unauthorized\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Predict churn – incorrect password → 401",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{basic_user}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{wrong_pass}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_id\": \"POSTMAN-{{$timestamp}}\",\n  \"customer_name\": \"Postman Demo Customer\",\n  \"age\": 35,\n  \"no_of_days_subscribed\": 120,\n  \"multi_screen\": \"No\",\n  \"mail_subscribed\": \"No\",\n  \"weekly_mins_watched\": 90,\n  \"minimum_daily_mins\": 5,\n  \"maximum_daily_mins\": 40,\n  \"weekly_max_night_mins\": 20,\n  \"videos_watched\": 12,\n  \"maximum_days_inactive\": 21,\n  \"customer_support_calls\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/predict",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "predict"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 401\", function () { pm.response.to.have.status(401); });",
+                  "pm.test(\"Body says Unauthorized\", function () { pm.expect(pm.response.json().error).to.eql(\"Unauthorized\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Predict churn – valid auth, missing customer_id → 400",
+          "request": {
+            "method": "POST",
+            "auth": null,
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"age\": 30\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/predict",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "predict"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Other protected endpoints",
+      "item": [
+        {
+          "name": "GET /api/stats → 200",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/stats",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "stats"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/predictions → 200",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/predictions?page=1&limit=5",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "predictions"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Has predictions array\", function () { pm.expect(pm.response.json().predictions).to.be.an(\"array\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/predictions/:id → 200",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/predictions/{{prediction_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "predictions",
+                "{{prediction_id}}"
+              ]
+            },
+            "description": "Run the prediction request first so prediction_id is set."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/batch-stats → 200",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/batch-stats",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "batch-stats"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/analytics/risk-segments → 200",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/analytics/risk-segments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "analytics",
+                "risk-segments"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/analytics/feature-importance → 200",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/analytics/feature-importance",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "analytics",
+                "feature-importance"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/analytics/churn-trend → 200",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/analytics/churn-trend",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "analytics",
+                "churn-trend"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/models/comparison → 200",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/models/comparison",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "models",
+                "comparison"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/stats without credentials → 401",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/stats",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "stats"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 401\", function () { pm.response.to.have.status(401); });",
+                  "pm.test(\"Body says Unauthorized\", function () { pm.expect(pm.response.json().error).to.eql(\"Unauthorized\"); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

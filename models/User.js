@@ -27,6 +27,13 @@ const userSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
+  },
+  twoFactor: {
+    enabled:     { type: Boolean, default: false },
+    method:      { type: String, enum: ['totp', 'email'], default: 'totp' },
+    secretEnc:   { type: String, select: false },
+    backupCodes: { type: [String], default: [], select: false }, // sha256 hashes
+    lastStep:    { type: Number, default: 0 }
   }
 });
 

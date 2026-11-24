@@ -9,6 +9,7 @@ pipeline {
     environment {
         PYTHON = '"C:\\Users\\Suhani Saxena\\AppData\\Local\\Programs\\Python\\Python312\\python.exe"'
         DOCKER = '"C:\\Users\\Suhani Saxena\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin\\docker.exe"'
+        DOCKER_BUILDKIT = '1'
     }
 
     stages {

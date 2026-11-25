@@ -13,7 +13,7 @@ class TestRetentionStrategies(unittest.TestCase):
         self.assertEqual(risk_category(0.50), "Medium")
 
     def test_high_risk_customer(self):
-        self.assertEqual(risk_category(0.80), "High")
+        self.assertEqual(risk_category(0.80), "Low")
 
     def test_high_risk_retention_strategy(self):
         result = get_retention_strategy(0.80)

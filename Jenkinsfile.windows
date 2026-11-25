@@ -64,13 +64,32 @@ pipeline {
         }
     }
 
-    post {
+        post {
         success {
             echo 'ChurnIQ pipeline completed successfully!'
         }
 
         failure {
-            echo 'ChurnIQ pipeline failed. Check the stage logs for details.'
+            echo 'ChurnIQ pipeline failed. Sending failure notification.'
+
+            emailext(
+                to: 'suhani.saxena23@st.niituniversity.in',
+                subject: "ChurnIQ Pipeline FAILED - Build #${BUILD_NUMBER}",
+                body: """Hello,
+
+The ChurnIQ CI/CD pipeline has failed.
+
+Build Number: ${BUILD_NUMBER}
+Job Name: ${JOB_NAME}
+Build URL: ${BUILD_URL}
+
+Please check the Jenkins console output for details.
+
+Regards,
+ChurnIQ CI/CD Pipeline
+""",
+                attachLog: true
+            )
         }
     }
 }
